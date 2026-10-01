@@ -1,0 +1,7 @@
+# Capturas de revisión local (generadas con Firefox headless, no son parte del sitio)
+capturas/
+
+# Sistema operativo y editores
+.DS_Store
+Thumbs.db
+*.swp
