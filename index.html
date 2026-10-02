@@ -121,14 +121,21 @@ main{flex:1;display:grid;grid-template-columns:minmax(0,1fr);gap:var(--gap);
 .chip{position:relative;display:inline-flex}
 .chip input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
 .chip__box{font:inherit;color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:var(--r-pill);
-  padding:9px 18px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:border-color .25s,box-shadow .25s}
+  padding:9px 18px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:border-color .35s ease,box-shadow .35s ease,transform .35s ease}
 .chip i{width:9px;height:9px;border-radius:50%;background:var(--c);flex:none}
 .chip input:checked + .chip__box{border-color:var(--c);box-shadow:0 0 18px color-mix(in srgb,var(--c) 40%,transparent)}
-.chip input[value="work"]{--c:var(--work)}
-.chip input[value="personal"]{--c:var(--personal)}
-.chip input[value="free"]{--c:var(--free)}
-.chip input[value="eat"]{--c:var(--eat)}
-.chip input[value="meet"]{--c:var(--meet)}
+/* El input es un absolute de 1x1 con opacity:0, asi que el :focus-visible global
+   cae en un elemento invisible y el teclado no muestra donde estas. Este anillo
+   lo pone en la caja que si se ve. */
+.chip:has(input:focus-visible)>.chip__box{outline:2px solid var(--st);outline-offset:3px}
+/* El gancho va en el <label> porque es el ancestro común de input, .chip__box e i.
+   Estando en el input, --c no heredaba a los otros dos: los puntos quedaban
+   transparentes y el chip activo tomaba currentColor en vez de su color. */
+.chip[data-s="work"]{--c:var(--work)}
+.chip[data-s="personal"]{--c:var(--personal)}
+.chip[data-s="free"]{--c:var(--free)}
+.chip[data-s="eat"]{--c:var(--eat)}
+.chip[data-s="meet"]{--c:var(--meet)}
 
 /* ===== SPOTIFY / YOUTUBE ===== */
 .media-card{display:grid;grid-template-columns:64px 1fr;gap:14px;margin-top:12px;align-items:center;min-width:0}
@@ -157,10 +164,98 @@ footer nav{display:flex;gap:18px;flex-wrap:wrap}
   footer{flex-direction:column;align-items:flex-start;gap:14px}
 }
 
+/* ===== CAPA B: BLUR + REVEAL =====
+   Borroso por defecto, con el brillo teñido por el color del estado activo.
+   Se aclara con hover o al entrar el foco (teclado o clic).
+   El reveal usa la misma forma :not(:checked) que el blur a proposito: si solo
+   se apoyara en :hover, la especificidad del :not() lo haria perder y el chip
+   nunca se veria nitido. */
+.blurable,
+.chip:has(> input:not(:checked))>.chip__box{
+  filter:blur(7px);opacity:.8;
+  box-shadow:0 0 36px color-mix(in srgb,var(--glow,var(--st)) 38%,transparent);
+  border-color:color-mix(in srgb,var(--glow,var(--st)) 45%,var(--line));
+  transition:filter .35s ease,opacity .35s ease,box-shadow .35s ease,border-color .35s ease,transform .35s ease;
+}
+.chip{--glow:var(--c)}
+.blurable:hover,.blurable:focus-within,
+.chip:has(> input:not(:checked)):hover>.chip__box,
+.chip:has(> input:not(:checked)):focus-within>.chip__box{
+  filter:none;opacity:1;box-shadow:0 0 0 transparent;border-color:var(--line);
+}
+/* Donde no hay raton no hay hover: nada queda borroso de forma permanente. */
+@media (hover:none){
+  .blurable,
+  .chip:has(> input:not(:checked))>.chip__box{filter:none;opacity:1;box-shadow:none}
+}
+
+/* ===== CAPA C: FLOTE SUTIL =====
+   3-5 px con ciclos de 8 a 10.5 s: el recorrido maximo es 5.8 px y la velocidad
+   media ~2.1-2.7 px/s. Con los 2-3 px y 10-14 s de antes eran 2.9 px y ~0.9
+   px/s, o sea 0.015 px por frame, que no se veia nada.
+   Al revelarse se quita la animacion y el elemento vuelve a su sitio con la
+   transicion de .35s. No se puede hacer con transform:none porque las
+   animaciones CSS ganan a las declaraciones normales del autor.
+   No lleva will-change: con una animacion de transform en marcha el motor
+   promueve la capa por su cuenta, y forzarlo mantenia 7 capas vivas. */
+@keyframes flote{
+  0%,100%{transform:translate3d(0,0,0)}
+  33%{transform:translate3d(3px,-5px,0)}
+  66%{transform:translate3d(-3px,4px,0)}
+}
+.blurable,
+.chip:has(> input:not(:checked))>.chip__box{
+  animation:flote var(--d,12s) ease-in-out var(--dl,0s) infinite;
+}
+#spotify{--d:8.5s;--dl:.4s}
+#youtube{--d:9.75s;--dl:1.2s}
+#mensaje{--d:9s;--dl:2s}
+.chip[data-s="work"]{--d:8s;--dl:.2s}
+.chip[data-s="personal"]{--d:9s;--dl:.8s}
+.chip[data-s="free"]{--d:10.5s;--dl:1.4s}
+.chip[data-s="eat"]{--d:8.5s;--dl:1.8s}
+.chip[data-s="meet"]{--d:9.75s;--dl:2s}
+.blurable:hover,.blurable:focus-within,
+.chip:has(> input:not(:checked)):hover>.chip__box,
+.chip:has(> input:not(:checked)):focus-within>.chip__box{
+  animation:none;
+}
+@media (hover:none),(prefers-reduced-motion:reduce){
+  .blurable,
+  .chip:has(> input:not(:checked))>.chip__box{animation:none}
+}
+
 /* ===== MOVIMIENTO REDUCIDO ===== */
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{transition:none!important;animation:none!important}
 }
+
+/* ===== CAPA C (correccion): el hover lo detecta una caja que NO se mueve ===== */
+.hold{display:block}
+.hold>.blurable{pointer-events:none}          /* la tarjeta en movimiento no recibe el hover */
+.hold>.blurable *{pointer-events:auto}        /* pero sus campos y enlaces siguen funcionando */
+.hold:hover>.blurable,.hold:focus-within>.blurable{
+  filter:none;opacity:1;box-shadow:0 0 0 transparent;border-color:var(--line);animation:none}
+
+/* ===== CAPA D: formulario ===== */
+.field-err{color:#ff7a85;font-size:11px}
+.field-err:empty{display:none}
+input[aria-invalid="true"],textarea[aria-invalid="true"]{border-color:#ff5a67}
+.form-err{font:12px var(--mono);color:#ff9aa3;background:#3a1218;border:1px solid #ff5a6755;border-radius:10px;padding:10px 12px}
+button.send:disabled{opacity:.6;cursor:progress}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+
+/* ===== CAPA D: vistas legales ===== */
+dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:var(--r-card);
+  padding:0;width:min(640px,92vw);margin:auto}
+dialog::backdrop{background:rgba(3,6,16,.75)}
+.dlg{padding:24px;max-height:82vh;overflow:auto}
+dialog h2{font-size:18px;font-weight:600;margin-bottom:4px}
+dialog h3{font-size:13px;margin:16px 0 4px;color:#9fc0ff}
+dialog p,dialog li{font-size:13px;line-height:1.55}
+dialog ul{padding-left:18px}
+.dlg-note{background:var(--warn-bg);color:var(--warn-fg);border-radius:10px;padding:10px 12px;font-size:12px;margin:10px 0 4px}
+.dlg-close{margin-top:18px;font:600 13px var(--sans);color:#fff;background:var(--accent);border:0;border-radius:10px;padding:10px 18px;cursor:pointer}
 </style>
 </head>
 <body data-state="work">
@@ -203,43 +298,46 @@ footer nav{display:flex;gap:18px;flex-wrap:wrap}
 
     <fieldset class="chips">
       <legend class="sr-only">Estado actual</legend>
-      <label class="chip"><input type="radio" name="estado" value="work" checked><span class="chip__box"><i aria-hidden="true"></i>Trabajo</span></label>
-      <label class="chip"><input type="radio" name="estado" value="personal"><span class="chip__box"><i aria-hidden="true"></i>Personal</span></label>
-      <label class="chip"><input type="radio" name="estado" value="free"><span class="chip__box"><i aria-hidden="true"></i>Libre</span></label>
-      <label class="chip"><input type="radio" name="estado" value="eat"><span class="chip__box"><i aria-hidden="true"></i>Comiendo / Baño</span></label>
-      <label class="chip"><input type="radio" name="estado" value="meet"><span class="chip__box"><i aria-hidden="true"></i>Junta</span></label>
+      <label class="chip" data-s="work"><input type="radio" name="estado" value="work" checked><span class="chip__box"><i aria-hidden="true"></i>Trabajo</span></label>
+      <label class="chip" data-s="personal"><input type="radio" name="estado" value="personal"><span class="chip__box"><i aria-hidden="true"></i>Personal</span></label>
+      <label class="chip" data-s="free"><input type="radio" name="estado" value="free"><span class="chip__box"><i aria-hidden="true"></i>Libre</span></label>
+      <label class="chip" data-s="eat"><input type="radio" name="estado" value="eat"><span class="chip__box"><i aria-hidden="true"></i>Comiendo / Baño</span></label>
+      <label class="chip" data-s="meet"><input type="radio" name="estado" value="meet"><span class="chip__box"><i aria-hidden="true"></i>Junta</span></label>
     </fieldset>
   </section>
 
   <!-- IZQUIERDA: Spotify + YouTube (irán en blur en la capa B) -->
   <section class="col col--media" aria-label="Multimedia">
-    <article class="card" id="spotify">
+    <div class="hold"><article class="card blurable" id="spotify">
       <h2>Spotify</h2><small>Reproduciendo…</small>
       <div class="media-card"><div class="thumb"></div>
         <div><strong>shelter</strong><br><small>Porter Robinson, Madeon</small><div class="bar"><span></span></div></div></div>
-    </article>
-    <article class="card" id="youtube">
+    </article></div>
+    <div class="hold"><article class="card blurable" id="youtube">
       <h2>YouTube</h2><small>Ahora viendo…</small>
       <div class="media-card"><div class="thumb"></div>
         <div><strong>Título del video de ejemplo</strong><br><small>Nombre del canal</small><div class="bar"><span></span></div></div></div>
-    </article>
+    </article></div>
   </section>
 
   <!-- DERECHA: mensaje por Telegram (irá en blur en la capa B) -->
   <section class="col col--contact" aria-label="Contacto">
-    <article class="card" id="mensaje">
+    <div class="hold"><article class="card blurable" id="mensaje">
       <h2>Enviar mensaje por Telegram</h2>
-      <form id="contacto">
-        <label>Nombre completo<input name="nombre" autocomplete="name" maxlength="80" required></label>
-        <label>Teléfono<input name="telefono" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" required></label>
-        <label>Correo electrónico<input name="correo" type="email" autocomplete="email" maxlength="120" required></label>
-        <label>Mensaje<textarea name="mensaje" maxlength="600" required></textarea></label>
-        <label class="consent"><input type="checkbox" name="consentimiento" required>
+      <form id="contacto" novalidate>
+        <label>Nombre completo<input name="nombre" autocomplete="name" maxlength="80" required aria-describedby="e-nombre"><span class="field-err" id="e-nombre" role="alert"></span></label>
+        <label>Teléfono<input name="telefono" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" required aria-describedby="e-telefono"><span class="field-err" id="e-telefono" role="alert"></span></label>
+        <label>Correo electrónico<input name="correo" type="email" autocomplete="email" maxlength="120" required aria-describedby="e-correo"><span class="field-err" id="e-correo" role="alert"></span></label>
+        <label>Mensaje<textarea name="mensaje" maxlength="600" required aria-describedby="e-mensaje"></textarea><span class="field-err" id="e-mensaje" role="alert"></span></label>
+        <div class="hp" aria-hidden="true"><input name="web" tabindex="-1" autocomplete="off"></div>
+        <label class="consent"><input type="checkbox" name="consentimiento" required aria-describedby="e-consentimiento">
           <span>Acepto el <a href="#aviso">Aviso de privacidad</a> y el tratamiento de mis datos para recibir respuesta.</span></label>
+        <span class="field-err" id="e-consentimiento" role="alert"></span>
         <button class="send" type="submit">Enviar mensaje</button>
         <p class="form-ok" id="ok" role="status" hidden></p>
+        <p class="form-err" id="fallo" role="alert" hidden></p>
       </form>
-    </article>
+    </article></div>
   </section>
 </main>
 
@@ -254,6 +352,27 @@ footer nav{display:flex;gap:18px;flex-wrap:wrap}
     <a href="#">GitHub</a><a href="#">Instagram</a><a href="#">LinkedIn</a><a href="#">X</a>
   </nav>
 </footer>
+
+<dialog id="aviso" aria-labelledby="t-aviso"><div class="dlg">
+  <h2 id="t-aviso">Aviso de privacidad</h2>
+  <p class="dlg-note">BORRADOR de estructura. No es texto legal definitivo: debe revisarlo un abogado antes de publicar.</p>
+  <h3>Responsable</h3><p>[NOMBRE COMPLETO], con domicilio en [DOMICILIO] y correo [CORREO], es responsable del tratamiento de tus datos personales.</p>
+  <h3>Datos que se recaban</h3><ul><li>Nombre, teléfono y correo electrónico.</li><li>El contenido del mensaje que escribas.</li></ul>
+  <h3>Finalidad</h3><p>Recibir tu mensaje y poder responderte. No se usan para publicidad ni se venden.</p>
+  <h3>Transferencia a terceros</h3><p>Tu mensaje se entrega mediante Telegram, un servicio de un tercero con servidores fuera de México. [REVISAR cómo debe declararse.]</p>
+  <h3>Conservación</h3><p>[DEFINIR por cuánto tiempo se conservan los mensajes.]</p>
+  <h3>Derechos ARCO y revocación</h3><p>Puedes acceder, rectificar, cancelar u oponerte al tratamiento, y revocar tu consentimiento, escribiendo a [CORREO]. [REVISAR el procedimiento y los plazos que marca la ley vigente.]</p>
+  <h3>Cambios al aviso</h3><p>Los cambios se publicarán en esta página. Última actualización: [FECHA].</p>
+  <button class="dlg-close" data-cerrar>Cerrar</button></div></dialog>
+<dialog id="terminos" aria-labelledby="t-terminos"><div class="dlg">
+  <h2 id="t-terminos">Términos y condiciones</h2>
+  <p class="dlg-note">BORRADOR de estructura. No es texto legal definitivo: debe revisarlo un abogado antes de publicar.</p>
+  <h3>Qué es este sitio</h3><p>Una página personal que muestra mi estado, mi ticket en curso y mi actividad pública.</p>
+  <h3>Información mostrada</h3><p>Los datos de estado, música, video y commits se muestran con fines informativos y pueden no estar actualizados.</p>
+  <h3>Uso del formulario</h3><p>No envíes datos sensibles ni contenido ilegal, ofensivo o publicitario. Puedo ignorar o bloquear mensajes abusivos.</p>
+  <h3>Propiedad y enlaces</h3><p>[DEFINIR propiedad del contenido y responsabilidad por enlaces a terceros.]</p>
+  <h3>Cambios y contacto</h3><p>Puedo modificar estos términos. Contacto: [CORREO]. Última actualización: [FECHA].</p>
+  <button class="dlg-close" data-cerrar>Cerrar</button></div></dialog>
 
 <script>
 const $ = id => document.getElementById(id);
@@ -285,16 +404,62 @@ const tick = () => {
 tick();
 setInterval(tick, 30000);
 
-/* ===== formulario: valida y confirma, todavía sin envío real =====
-   El token de un bot de Telegram no puede ir en este archivo: cualquiera que abra
-   la página lo leería en el devtools. Conectar el envío exige un proxy server-side. */
-$('contacto').addEventListener('submit', e => {
+/* ===== formulario (Capa D): vacio -> invalido -> enviando -> enviado | error ===== */
+const form = $('contacto');
+const REGLAS = {
+  nombre:         (v) => v.trim().length >= 3 || 'Escribe tu nombre completo.',
+  telefono:       (v) => (/^[+()\d\s-]+$/.test(v) && v.replace(/\D/g, '').length >= 10) || 'Escribe un teléfono válido (10 dígitos o más).',
+  correo:         (v) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim()) || 'Escribe un correo válido.',
+  mensaje:        (v) => v.trim().length >= 10 || 'El mensaje es muy corto (mínimo 10 caracteres).',
+  consentimiento: (v, el) => el.checked || 'Debes aceptar el Aviso de privacidad para enviar.'
+};
+const marcar = (n, texto) => {
+  $('e-' + n).textContent = texto;
+  form.elements[n].setAttribute('aria-invalid', String(!!texto));
+};
+form.addEventListener('input', e => { if (e.target.name in REGLAS) marcar(e.target.name, ''); });
+
+/* SIMULADO hasta tener backend. El token del bot de Telegram NO puede ir aqui: lo leeria cualquiera. */
+const SIMULAR = 'ok';   // 'ok' | 'error' para probar los dos estados finales
+const enviarMensaje = (datos) => new Promise((ok, fallo) =>
+  setTimeout(() => SIMULAR === 'ok' ? ok() : fallo(new Error('simulado')), 900));
+
+form.addEventListener('submit', async e => {
   e.preventDefault();
-  const datos = Object.fromEntries(new FormData(e.target));
-  $('ok').textContent = `Gracias ${datos.nombre.split(' ')[0]}. Mensaje de ${datos.mensaje.length} caracteres listo para enviar a ${datos.correo}.`;
-  $('ok').hidden = false;
-  e.target.reset();
+  $('ok').hidden = $('fallo').hidden = true;
+  let primero = null;
+  for (const n in REGLAS) {
+    const el = form.elements[n], r = REGLAS[n](el.value, el);
+    marcar(n, r === true ? '' : r);
+    if (r !== true && !primero) primero = el;
+  }
+  if (primero) { primero.focus(); return; }          // estado: invalido
+  if (form.elements.web.value) {                     // trampa anti-bots: se ignora sin avisar
+    console.warn('envio descartado: campo trampaia relleno');
+    return;
+  }
+  const boton = form.querySelector('.send');
+  boton.disabled = true; boton.textContent = 'Enviando…';   // estado: enviando
+  try {
+    await enviarMensaje(Object.fromEntries(new FormData(form)));
+    $('ok').textContent = 'Mensaje enviado. Gracias, te respondo en cuanto pueda.';   // estado: enviado
+    $('ok').hidden = false; form.reset();
+  } catch {
+    $('fallo').textContent = 'No se pudo enviar. Inténtalo de nuevo o escríbeme al correo del pie de página.';   // estado: error
+    $('fallo').hidden = false;
+  } finally {
+    boton.disabled = false; boton.textContent = 'Enviar mensaje';
+  }
 });
+
+/* ===== vistas legales ===== */
+document.addEventListener('click', e => {
+  const a = e.target.closest('a[href="#aviso"],a[href="#terminos"]');
+  if (a) { e.preventDefault(); $(a.hash.slice(1)).showModal(); }
+});
+document.querySelectorAll('dialog').forEach(d => d.addEventListener('click', e => {
+  if (e.target === d || e.target.closest('[data-cerrar]')) d.close();
+}));
 </script>
 </body>
 </html>

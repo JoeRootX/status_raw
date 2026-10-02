@@ -2,3 +2,6 @@
 .DS_Store
 Thumbs.db
 *.swp
+
+# Copias de seguridad de las migraciones
+*.bak
