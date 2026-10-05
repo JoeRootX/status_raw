@@ -281,11 +281,16 @@ button.send:disabled { opacity: .6; cursor: progress }
 
 /* ===== PAGINAS LEGALES =====
    Antes eran <dialog> dentro de index.html. Ahora son rutas propias, asi que el
-   bloque principal de la pagina legal NO puede seguir siendo un <main> en grid de
-   una columna centrado verticalmente: por eso .main--legal y el display:block de
-   .legal, que anula el grid global. */
-.main--legal { align-content: start; padding-block: clamp(24px, 5vh, 48px) }
-.legal { display: block; max-width: 760px }
+   bloque principal de la pagina legal NO puede seguir siendo el <main> en grid de
+   tres columnas ni centrado verticalmente: sin anular las columnas, a partir de
+   1200px el texto caeria dentro de la columna estrecha de 280px. Por eso
+   .main--legal devuelve el main a una sola columna y .legal limita su ancho. */
+.main--legal {
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  padding-block: clamp(24px, 5vh, 48px);
+}
+.legal { display: block; width: 100%; max-width: 760px; margin-inline: auto }
 .legal h1 { font-size: clamp(22px, 3vw, 28px); font-weight: 600; margin-bottom: 4px }
 .legal h2 { font-size: 13px; margin: 22px 0 4px; color: #9fc0ff }
 .legal p, .legal li { font-size: 14px; line-height: 1.6 }
