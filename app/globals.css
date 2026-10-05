@@ -1,0 +1,304 @@
+/* ===== TOKENS (salen del diseño de Figma) ===== */
+:root {
+  --bg: #070d1c; --panel: #0d1630; --line: #1c2a52; --text: #c9d6f5; --muted: #8494bd; --accent: #2f6bff;
+  --mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+  --sans: var(--font-inter), system-ui, sans-serif;
+  --r-card: 14px; --r-pill: 999px;
+  /* estados: color + etiqueta */
+  --work: #ff3b4a; --personal: #ff9f2e; --free: #2fd16b; --eat: #2f6bff; --meet: #a24bff;
+  /* etiquetas de la cola de tickets */
+  --warn-bg: #3a2c0f; --warn-fg: #f3b83a; --ok-bg: #10331f; --ok-fg: #3fd07f;
+  --st: var(--work);
+  /* escala fluida */
+  --pad: clamp(16px, 4vw, 48px);
+  --gap: clamp(20px, 2.4vw, 32px);
+  --avatar: clamp(120px, 26vw, 180px);
+}
+/* El estado lo fija el servidor en el elemento que envuelve el contenido, asi que
+   el selector es generico y no `body[data-state]`: en React no se puede poner un
+   atributo en <body> desde un componente. Al declarar --st aqui, todo lo que
+   cuelgue del elemento lo hereda igual que antes. */
+[data-state="work"] { --st: var(--work) }
+[data-state="personal"] { --st: var(--personal) }
+[data-state="free"] { --st: var(--free) }
+[data-state="eat"] { --st: var(--eat) }
+[data-state="meet"] { --st: var(--meet) }
+
+* { box-sizing: border-box; margin: 0 }
+html, body { height: 100% }
+body {
+  background: radial-gradient(120% 80% at 85% 20%, #10224f 0%, transparent 55%), var(--bg);
+  color: var(--text); font: 400 14px/1.4 var(--sans); min-height: 100vh;
+  display: flex; flex-direction: column; padding: 0
+}
+:focus-visible { outline: 2px solid var(--st); outline-offset: 3px }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap; border: 0
+}
+
+/* ===== ANCHO DE CONTENIDO ===== */
+.top, main, footer { width: 100%; max-width: 1760px; margin-inline: auto; padding-inline: var(--pad) }
+
+/* ===== HEADER ===== */
+.top {
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 20px;
+  padding-top: clamp(28px, 5vh, 44px); font-family: var(--mono)
+}
+.brand { font-size: 20px }
+.clock { text-align: right; color: #8fb0ff }
+.clock b { display: block; font-size: clamp(24px, 3vw, 30px); font-weight: 500; letter-spacing: .08em }
+.clock span { font-size: 12px }
+
+/* ===== LAYOUT ===== */
+main {
+  flex: 1; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--gap);
+  align-content: center; padding-block: clamp(24px, 3vh, 40px)
+}
+.col { display: flex; flex-direction: column; gap: 20px; min-width: 0 }
+.center { display: flex; flex-direction: column; align-items: center; gap: 28px; min-width: 0; container-type: inline-size }
+/* en apilado, la identidad va primero aunque en el DOM no sea lo primero */
+.center { order: 1 }
+.col--media { order: 2 }
+.col--contact { order: 3 }
+
+/* dos columnas: identidad arriba, multimedia y contacto abajo */
+@media (min-width: 960px) and (max-width: 1199.98px) {
+  main { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas: "center center" "media contact" }
+  .center { grid-area: center }
+  .col--media { grid-area: media }
+  .col--contact { grid-area: contact }
+}
+/* tres columnas: laterales fijos y pegados al scroll.
+   Las áreas son explícitas porque el `order` del apilado sigue activo y
+   el auto-placement pondría la identidad en la columna estrecha. */
+@media (min-width: 1200px) {
+  main {
+    grid-template-columns: 280px minmax(0, 1fr) 320px; grid-template-areas: "media center contact";
+    align-items: start; align-content: start
+  }
+  .center { grid-area: center }
+  .col--media { grid-area: media }
+  .col--contact { grid-area: contact }
+  .col { position: sticky; top: 24px }
+}
+
+.card {
+  background: color-mix(in srgb, var(--panel) 85%, transparent); border: 1px solid var(--line);
+  border-radius: var(--r-card); padding: 16px
+}
+.card h2 { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 10px }
+.card small { color: var(--muted); font-size: 12px }
+.queue { margin: 6px 0 0; padding: 0 }
+
+/* ===== STATUS + AVATAR (siempre nítidos) ===== */
+.me { text-align: center; width: 100% }
+.avatar {
+  width: var(--avatar); height: var(--avatar); border-radius: 50%; object-fit: cover;
+  display: block; margin: 0 auto 16px; border: 3px solid var(--st);
+  box-shadow: 0 0 40px color-mix(in srgb, var(--st) 55%, transparent), 0 0 90px color-mix(in srgb, var(--st) 25%, transparent);
+  transition: .4s
+}
+.me h1 { font-size: clamp(19px, 2.2vw, 24px); font-weight: 500; display: flex; gap: 10px; align-items: center; justify-content: center }
+.dot { width: 12px; height: 12px; border-radius: 50%; background: var(--st); box-shadow: 0 0 12px var(--st); flex: none }
+.me p { font-family: var(--mono); color: var(--muted); margin-top: 6px; font-size: 13px }
+
+/* ===== TARJETAS DEL CENTRO =====
+   Container queries: la rejilla responde al ancho real del bloque central, no al del
+   viewport, que en el layout de 3 columnas varía entre ~680px y ~1000px. */
+.info { display: grid; grid-template-columns: minmax(0, 1fr); gap: clamp(14px, 1.4vw, 18px); width: 100% }
+/* 2 columnas: Jira y GitHub comparten fila y la cola va abajo a lo ancho.
+   `dense` evita que la cola, al ocupar la fila entera, empuje la tercera
+   tarjeta a una fila nueva y deje huecos en forma de L. */
+@container (min-width: 480px) {
+  .info { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-flow: row dense }
+  .info > .card--queue { grid-column: 1 / -1 }
+}
+/* 3 columnas: el diseño de Figma, con la cola como tercera tarjeta */
+@container (min-width: 980px) {
+  .info { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-flow: row }
+  .info > .card--queue { grid-column: auto }
+}
+.badge {
+  margin-left: auto; font-size: 11px; padding: 3px 10px; border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--st) 18%, transparent); color: var(--st);
+  border: 1px solid color-mix(in srgb, var(--st) 35%, transparent)
+}
+.ticket-id { font-size: 18px; font-weight: 500; margin: 6px 0 4px }
+.queue li { list-style: none; display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; font-size: 12px; padding: 7px 0 }
+.card-note { color: var(--muted); font-size: 12px; margin-top: 8px }
+.queue li span:first-child { font-family: var(--mono); color: var(--muted) }
+.tag { font-size: 11px; padding: 2px 9px; border-radius: var(--r-pill) }
+.tag.media { background: var(--warn-bg); color: var(--warn-fg) }
+.tag.baja { background: var(--ok-bg); color: var(--ok-fg) }
+.commit { margin: 8px 0; color: #9fc0ff; font-weight: 500; overflow-wrap: anywhere }
+/* flex-wrap: porque el texto del commit viene de GitHub y su largo no se controla.
+   En la columna estrecha de la tarjeta de tres columnas, sin esto las dos puntas
+   del .meta se pisan en vez de bajar de linea. */
+.meta { display: flex; justify-content: space-between; gap: 4px 10px; flex-wrap: wrap; font-family: var(--mono); color: var(--muted); font-size: 12px }
+.meta code { font: inherit; color: inherit; background: none; padding: 0 }
+.meta a { color: #8fb0ff }
+
+/* ===== CHIPS DE ESTADO (solo lectura) =====
+   Antes eran radios y el visitante podia cambiar su propio estado. Ahora el estado
+   lo cambia un bot de Telegram, asi que cada chip es un <div> y el activo se marca
+   con [data-activo]. Esa sustitucion es la que permite conservar el blur/flote de
+   los inactivos: `input:not(:checked)` pasa a ser `:not([data-activo])`. */
+.chips { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; border: 0; padding: 0; margin: 0; min-width: 0 }
+.chips:focus-visible { border-radius: var(--r-pill) }
+.chip { position: relative; display: inline-flex; --glow: var(--c) }
+.chip__box {
+  font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--r-pill); padding: 9px 18px; display: flex; align-items: center; gap: 10px;
+  transition: border-color .35s ease, box-shadow .35s ease, transform .35s ease
+}
+.chip i { width: 9px; height: 9px; border-radius: 50%; background: var(--c); flex: none }
+.chip[data-activo] > .chip__box {
+  border-color: var(--c);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--c) 40%, transparent)
+}
+/* El color va en el <div class="chip"> porque es el ancestro común de .chip__box e i.
+   Si --c se declarara en el input, los puntos se quedaban transparentes. */
+.chip[data-s="work"] { --c: var(--work) }
+.chip[data-s="personal"] { --c: var(--personal) }
+.chip[data-s="free"] { --c: var(--free) }
+.chip[data-s="eat"] { --c: var(--eat) }
+.chip[data-s="meet"] { --c: var(--meet) }
+
+/* ===== SPOTIFY / YOUTUBE ===== */
+.media-card { display: grid; grid-template-columns: 64px 1fr; gap: 14px; margin-top: 12px; align-items: center; min-width: 0 }
+.thumb { width: 64px; height: 64px; border-radius: 8px; background: linear-gradient(135deg, #2a3f7a, #7a3fa0); flex: none }
+.bar { height: 4px; border-radius: 4px; background: var(--line); margin-top: 10px }
+.bar span { display: block; height: 100%; width: 42%; border-radius: 4px; background: var(--accent) }
+
+/* ===== FORMULARIO ===== */
+form { display: flex; flex-direction: column; gap: 12px; margin-top: 14px }
+label { font-size: 12px; color: var(--muted); display: flex; flex-direction: column; gap: 5px }
+input:not([type="checkbox"]):not([type="radio"]), textarea {
+  font: inherit; color: var(--text); background: #0a1229; border: 1px solid var(--line);
+  border-radius: 10px; padding: 10px 12px; width: 100%
+}
+textarea { min-height: 84px; resize: vertical }
+.consent { display: flex; flex-direction: row; gap: 10px; align-items: flex-start; font-size: 12px; color: var(--muted); line-height: 1.4 }
+.consent input { width: 16px; height: 16px; flex: none; margin-top: 2px; accent-color: var(--st) }
+/* El label va como hermano del checkbox y se asocia por htmlFor. Anulo el
+   `display:flex; flex-direction:column` global porque aqui el texto y la casilla
+   van en linea. */
+.consent label { flex: 1; display: block; font-size: inherit; color: inherit; cursor: pointer }
+.form-ok {
+  font: 12px var(--mono); color: var(--ok-fg); background: var(--ok-bg);
+  border: 1px solid color-mix(in srgb, var(--ok-fg) 35%, transparent); border-radius: 10px; padding: 10px 12px
+}
+.form-ok:empty, .form-err:empty { display: none }
+a { color: #8fb0ff }
+button.send { font: 600 14px var(--sans); color: #fff; background: var(--accent); border: 0; border-radius: 10px; padding: 12px; cursor: pointer }
+
+/* ===== FOOTER ===== */
+footer {
+  display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap;
+  padding: 22px 0 30px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted)
+}
+footer nav { display: flex; gap: 18px; flex-wrap: wrap }
+/* Sin destino todavia: texto plano, no un enlace que no lleva a ningun lado. */
+.sin-destino { opacity: .55 }
+.who { font-family: var(--mono) }
+@media (max-width: 679.98px) {
+  footer { flex-direction: column; align-items: flex-start; gap: 14px }
+}
+
+/* ===== CAPA B: BLUR + REVEAL =====
+   Borroso por defecto, con el brillo teñido por el color del propio chip.
+   Se aclara con hover o al entrar el foco (teclado o clic).
+   `:not([data-activo])` y no solo :hover a proposito: si solo se apoyara en :hover,
+   la especificidad lo haria perder y el chip nunca se veria nitido. */
+.blurable,
+.chip:not([data-activo]) > .chip__box {
+  filter: blur(7px); opacity: .8;
+  box-shadow: 0 0 36px color-mix(in srgb, var(--glow, var(--st)) 38%, transparent);
+  border-color: color-mix(in srgb, var(--glow, var(--st)) 45%, var(--line));
+  transition: filter .35s ease, opacity .35s ease, box-shadow .35s ease, border-color .35s ease, transform .35s ease;
+}
+.blurable:hover, .blurable:focus-within,
+.chip:not([data-activo]):hover > .chip__box,
+.chips:focus-within .chip:not([data-activo]) > .chip__box {
+  filter: none; opacity: 1; box-shadow: 0 0 0 transparent; border-color: var(--line);
+}
+/* Donde no hay raton no hay hover: nada queda borroso de forma permanente. */
+@media (hover: none) {
+  .blurable, .chip:not([data-activo]) > .chip__box { filter: none; opacity: 1; box-shadow: none }
+}
+
+/* ===== CAPA C: FLOTE SUTIL =====
+   3-5 px con ciclos de 8 a 10.5 s: el recorrido maximo es 5.8 px y la velocidad
+   media ~2.1-2.7 px/s. Con los 2-3 px y 10-14 s de antes eran 2.9 px y ~0.9
+   px/s, o sea 0.015 px por frame, que no se veia nada.
+   Al revelarse se quita la animacion y el elemento vuelve a su sitio con la
+   transicion de .35s. No se puede hacer con transform:none porque las
+   animaciones CSS ganan a las declaraciones normales del autor.
+   No lleva will-change: con una animacion de transform en marcha el motor
+   promueve la capa por su cuenta, y forzarlo mantenia 7 capas vivas. */
+@keyframes flote {
+  0%, 100% { transform: translate3d(0, 0, 0) }
+  33% { transform: translate3d(3px, -5px, 0) }
+  66% { transform: translate3d(-3px, 4px, 0) }
+}
+.blurable,
+.chip:not([data-activo]) > .chip__box {
+  animation: flote var(--d, 12s) ease-in-out var(--dl, 0s) infinite;
+}
+#spotify { --d: 8.5s; --dl: .4s }
+#youtube { --d: 9.75s; --dl: 1.2s }
+#mensaje { --d: 9s; --dl: 2s }
+.chip[data-s="work"] { --d: 8s; --dl: .2s }
+.chip[data-s="personal"] { --d: 9s; --dl: .8s }
+.chip[data-s="free"] { --d: 10.5s; --dl: 1.4s }
+.chip[data-s="eat"] { --d: 8.5s; --dl: 1.8s }
+.chip[data-s="meet"] { --d: 9.75s; --dl: 2s }
+.blurable:hover, .blurable:focus-within,
+.chip:not([data-activo]):hover > .chip__box,
+.chips:focus-within .chip:not([data-activo]) > .chip__box {
+  animation: none;
+}
+@media (hover: none), (prefers-reduced-motion: reduce) {
+  .blurable, .chip:not([data-activo]) > .chip__box { animation: none }
+}
+
+/* ===== MOVIMIENTO REDUCIDO ===== */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important }
+}
+
+/* ===== CAPA C (correccion): el hover lo detecta una caja que NO se mueve ===== */
+.hold { display: block }
+.hold > .blurable { pointer-events: none }          /* la tarjeta en movimiento no recibe el hover */
+.hold > .blurable * { pointer-events: auto }        /* pero sus campos y enlaces siguen funcionando */
+.hold:hover > .blurable, .hold:focus-within > .blurable {
+  filter: none; opacity: 1; box-shadow: 0 0 0 transparent; border-color: var(--line); animation: none
+}
+
+/* ===== CAPA D: formulario ===== */
+.field-err { color: #ff7a85; font-size: 11px }
+.field-err:empty { display: none }
+input[aria-invalid="true"], textarea[aria-invalid="true"] { border-color: #ff5a67 }
+.form-err { font: 12px var(--mono); color: #ff9aa3; background: #3a1218; border: 1px solid #ff5a6755; border-radius: 10px; padding: 10px 12px }
+button.send:disabled { opacity: .6; cursor: progress }
+.hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden }
+
+/* ===== PAGINAS LEGALES =====
+   Antes eran <dialog> dentro de index.html. Ahora son rutas propias, asi que el
+   bloque principal de la pagina legal NO puede seguir siendo el <main> en grid de
+   tres columnas ni centrado verticalmente: sin anular las columnas, a partir de
+   1200px el texto caeria dentro de la columna estrecha de 280px. Por eso
+   .main--legal devuelve el main a una sola columna y .legal limita su ancho. */
+.main--legal {
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  padding-block: clamp(24px, 5vh, 48px);
+}
+.legal { display: block; width: 100%; max-width: 760px; margin-inline: auto }
+.legal h1 { font-size: clamp(22px, 3vw, 28px); font-weight: 600; margin-bottom: 4px }
+.legal h2 { font-size: 13px; margin: 22px 0 4px; color: #9fc0ff }
+.legal p, .legal li { font-size: 14px; line-height: 1.6 }
+.legal ul { padding-left: 18px }
+.legal-note { background: var(--warn-bg); color: var(--warn-fg); border-radius: 10px; padding: 10px 12px; font-size: 12px; margin: 10px 0 4px }
+.back { display: inline-block; margin-top: 26px; font-size: 13px }
