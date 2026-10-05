@@ -131,8 +131,13 @@ main {
 .tag { font-size: 11px; padding: 2px 9px; border-radius: var(--r-pill) }
 .tag.media { background: var(--warn-bg); color: var(--warn-fg) }
 .tag.baja { background: var(--ok-bg); color: var(--ok-fg) }
-.commit { margin: 8px 0; color: #9fc0ff; font-weight: 500 }
-.meta { display: flex; justify-content: space-between; gap: 10px; font-family: var(--mono); color: var(--muted); font-size: 12px }
+.commit { margin: 8px 0; color: #9fc0ff; font-weight: 500; overflow-wrap: anywhere }
+/* flex-wrap: porque el texto del commit viene de GitHub y su largo no se controla.
+   En la columna estrecha de la tarjeta de tres columnas, sin esto las dos puntas
+   del .meta se pisan en vez de bajar de linea. */
+.meta { display: flex; justify-content: space-between; gap: 4px 10px; flex-wrap: wrap; font-family: var(--mono); color: var(--muted); font-size: 12px }
+.meta code { font: inherit; color: inherit; background: none; padding: 0 }
+.meta a { color: #8fb0ff }
 
 /* ===== CHIPS DE ESTADO (solo lectura) =====
    Antes eran radios y el visitante podia cambiar su propio estado. Ahora el estado

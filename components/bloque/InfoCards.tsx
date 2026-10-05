@@ -1,7 +1,10 @@
-import { COLA_TICKETS, TICKET_ACTUAL, ULTIMO_COMMIT } from '@/lib/datos';
+import Link from 'next/link';
+import type { Fuente } from '@/lib/fuente';
+import type { Commit } from '@/lib/github';
+import { COLA_TICKETS, TICKET_ACTUAL } from '@/lib/datos';
 import Estado from './Estado';
 
-export default function InfoCards() {
+export default function InfoCards({ commit }: { commit: Fuente<Commit> }) {
   return (
     <div className="info">
       <article className="card">
@@ -44,13 +47,23 @@ export default function InfoCards() {
       <article className="card">
         <h2>GitHub</h2>
         <small>Último commit enviado</small>
-        <Estado senal={ULTIMO_COMMIT.senal}>
-          {(commit) => (
+        <Estado senal={commit.senal}>
+          {(c) => (
             <>
-              <p className="commit">{commit.mensaje}</p>
+              <p className="commit" title={c.mensaje}>
+                {c.mensaje}
+              </p>
               <div className="meta">
-                <span>{commit.autor}</span>
-                <span>{commit.cuando}</span>
+                {/* La rama es el enlace: lleva al commit concreto, no al repo. */}
+                <span>
+                  {c.repo} ·{' '}
+                  <Link href={c.url} target="_blank" rel="noreferrer" className="commit-rama">
+                    {c.rama}
+                  </Link>
+                </span>
+                <span>
+                  <code>{c.sha}</code> · {c.cuando}
+                </span>
               </div>
             </>
           )}

@@ -57,20 +57,10 @@ export const COLA_TICKETS: Fuente<TicketEnCola[]> = {
 
 /* ============================================================
    GITHUB
-   El repo es privado, asi que el panel enseña texto generico
-   y jamas el mensaje real del commit ni su SHA.
+   El commit ya no vive aqui: lo pide la API de GitHub, asi que
+   lo trae `ultimoCommit()` en lib/github.ts. El dato de ejemplo
+   que se usa sin token tambien esta ahi.
    ============================================================ */
-
-export type Commit = {
-  mensaje: string;
-  autor: string;
-  cuando: string;
-};
-
-export const ULTIMO_COMMIT: Fuente<Commit> = {
-  modo: 'manual',
-  senal: listo({ mensaje: 'Último commit enviado', autor: 'repositorio privado', cuando: 'hace un momento' }),
-};
 
 /* ============================================================
    MULTIMEDIA

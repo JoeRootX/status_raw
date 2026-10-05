@@ -1,4 +1,5 @@
 import { ESTADO_ACTUAL } from '@/lib/datos';
+import { ultimoCommit } from '@/lib/github';
 import ChipsEstado from '@/components/bloque/ChipsEstado';
 import ContactForm from '@/components/bloque/ContactForm';
 import Footer from '@/components/bloque/Footer';
@@ -7,7 +8,15 @@ import InfoCards from '@/components/bloque/InfoCards';
 import Multimedia from '@/components/bloque/Multimedia';
 import Reloj from '@/components/bloque/Reloj';
 
-export default function Inicio() {
+/**
+ * Cinco minutos. Es lo que tarda GitHub en devolver los datos y lo que aguanta un
+ * panel de estado sin que cada visita dispare una peticion a su API.
+ */
+export const revalidate = 300;
+
+export default async function Inicio() {
+  const commit = await ultimoCommit();
+
   return (
     <>
       <header className="top">
@@ -22,7 +31,7 @@ export default function Inicio() {
         {/* CENTRO: identidad, estado y trabajo en curso */}
         <section className="center">
           <Identidad estado={ESTADO_ACTUAL} />
-          <InfoCards />
+          <InfoCards commit={commit} />
           <ChipsEstado actual={ESTADO_ACTUAL} />
         </section>
 
