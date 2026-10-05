@@ -1,7 +1,7 @@
-# Sistema operativo y editores
-.DS_Store
-Thumbs.db
-*.swp
-
-# Copias de seguridad de las migraciones
 *.bak
+node_modules
+.next
+next-env.d.ts
+.vercel
+*.tsbuildinfo
+.env*
