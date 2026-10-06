@@ -1,17 +1,25 @@
 import Link from 'next/link';
 import type { Fuente } from '@/lib/fuente';
 import type { Commit } from '@/lib/github';
-import { COLA_TICKETS, TICKET_ACTUAL } from '@/lib/datos';
+import type { TicketActual, TicketEnCola } from '@/lib/jira';
 import Estado from './Estado';
 
-export default function InfoCards({ commit }: { commit: Fuente<Commit> }) {
+export default function InfoCards({
+  commit,
+  ticketActual,
+  colaTickets,
+}: {
+  commit: Fuente<Commit>;
+  ticketActual: Fuente<TicketActual>;
+  colaTickets: Fuente<TicketEnCola[]>;
+}) {
   return (
     <div className="info">
       <article className="card">
         <h2>
           Jira <span className="badge">En progreso</span>
         </h2>
-        <Estado senal={TICKET_ACTUAL.senal}>
+        <Estado senal={ticketActual.senal}>
           {(ticket) => (
             <>
               <small>Ticket</small>
@@ -25,18 +33,18 @@ export default function InfoCards({ commit }: { commit: Fuente<Commit> }) {
       <article className="card card--queue">
         <h2>
           En cola de tickets{' '}
-          <Estado senal={COLA_TICKETS.senal}>
+          <Estado senal={colaTickets.senal}>
             {(cola) => <span className="badge">{cola.length}</span>}
           </Estado>
         </h2>
-        <Estado senal={COLA_TICKETS.senal}>
+        <Estado senal={colaTickets.senal}>
           {(cola) => (
             <ul className="queue">
               {cola.map((ticket) => (
                 <li key={ticket.clave}>
                   <span>{ticket.clave}</span>
                   <span>{ticket.resumen}</span>
-                  <span className={`tag ${ticket.prioridad}`}>{ticket.prioridad}</span>
+                  <span className={`tag ${ticket.prioridad ?? 'media'}`}>{ticket.prioridad ?? 'media'}</span>
                 </li>
               ))}
             </ul>

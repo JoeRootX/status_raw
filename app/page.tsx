@@ -2,6 +2,7 @@ import { ESTADO_ACTUAL } from '@/lib/datos';
 import { ultimoCommit } from '@/lib/github';
 import { cancionActual } from '@/lib/spotify';
 import { videoActual } from '@/lib/youtube';
+import { colaTickets, ticketActual } from '@/lib/jira';
 import ChipsEstado from '@/components/bloque/ChipsEstado';
 import ContactForm from '@/components/bloque/ContactForm';
 import Footer from '@/components/bloque/Footer';
@@ -17,9 +18,13 @@ import Reloj from '@/components/bloque/Reloj';
 export const revalidate = 300;
 
 export default async function Inicio() {
-  const commit = await ultimoCommit();
-  const spotify = await cancionActual();
-  const youtube = await videoActual();
+  const [commit, spotify, youtube, ticket, cola] = await Promise.all([
+    ultimoCommit(),
+    cancionActual(),
+    videoActual(),
+    ticketActual(),
+    colaTickets(),
+  ]);
 
   return (
     <>
@@ -35,7 +40,7 @@ export default async function Inicio() {
         {/* CENTRO: identidad, estado y trabajo en curso */}
         <section className="center">
           <Identidad estado={ESTADO_ACTUAL} />
-          <InfoCards commit={commit} />
+          <InfoCards commit={commit} ticketActual={ticket} colaTickets={cola} />
           <ChipsEstado actual={ESTADO_ACTUAL} />
         </section>
 
