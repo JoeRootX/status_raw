@@ -1,6 +1,7 @@
 import { ESTADO_ACTUAL } from '@/lib/datos';
 import { ultimoCommit } from '@/lib/github';
 import { cancionActual } from '@/lib/spotify';
+import { videoActual } from '@/lib/youtube';
 import ChipsEstado from '@/components/bloque/ChipsEstado';
 import ContactForm from '@/components/bloque/ContactForm';
 import Footer from '@/components/bloque/Footer';
@@ -18,6 +19,7 @@ export const revalidate = 300;
 export default async function Inicio() {
   const commit = await ultimoCommit();
   const spotify = await cancionActual();
+  const youtube = await videoActual();
 
   return (
     <>
@@ -38,7 +40,7 @@ export default async function Inicio() {
         </section>
 
         {/* IZQUIERDA: Spotify + YouTube */}
-        <Multimedia spotify={spotify} />
+        <Multimedia spotify={spotify} youtube={youtube} />
 
         {/* DERECHA: mensaje por Telegram */}
         <section className="col col--contact" aria-label="Contacto">

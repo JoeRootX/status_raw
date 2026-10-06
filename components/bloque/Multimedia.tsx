@@ -1,5 +1,5 @@
-import { YOUTUBE } from '@/lib/datos';
 import type { Cancion } from '@/lib/spotify';
+import type { Video } from '@/lib/youtube';
 import type { Fuente } from '@/lib/fuente';
 import Estado from './Estado';
 
@@ -13,9 +13,10 @@ function Barra({ avance }: { avance: number }) {
 
 type Props = {
   spotify: Fuente<Cancion>;
+  youtube: Fuente<Video>;
 };
 
-export default function Multimedia({ spotify }: Props) {
+export default function Multimedia({ spotify, youtube }: Props) {
   return (
     <section className="col col--media" aria-label="Multimedia">
       {/* El .hold es el que escucha el hover: la tarjeta de dentro va flotando y no
@@ -45,17 +46,17 @@ export default function Multimedia({ spotify }: Props) {
       <div className="hold">
         <article className="card blurable" id="youtube">
           <h2>YouTube</h2>
-          <Estado senal={YOUTUBE.senal}>
+          <Estado senal={youtube.senal}>
             {(video) => (
               <>
-                <small>Ahora viendo…</small>
+                <small>{video.viendoAhora ? 'Reproduciendo…' : 'Último video…'}</small>
                 <div className="media-card">
-                  <div className="thumb" />
+                  <div className="thumb" aria-hidden={video.imagen ? 'false' : 'true'} />
                   <div>
                     <strong>{video.titulo}</strong>
                     <br />
                     <small>{video.canal}</small>
-                    <Barra avance={42} />
+                    <Barra avance={video.avance ?? 42} />
                   </div>
                 </div>
               </>

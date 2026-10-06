@@ -78,6 +78,12 @@ export type Reproduccion = {
 export type Video = {
   titulo: string;
   canal: string;
+  url?: string | null;
+  imagen?: string | null;
+  duracionSeg?: number | null;
+  progresoSeg?: number | null;
+  avance?: number;
+  viendoAhora?: boolean;
 };
 
 export const SPOTIFY: Fuente<Reproduccion> = {
@@ -94,7 +100,16 @@ export const SPOTIFY: Fuente<Reproduccion> = {
 
 export const YOUTUBE: Fuente<Video> = {
   modo: 'manual',
-  senal: listo({ titulo: 'Título del video de ejemplo', canal: 'Nombre del canal' }),
+  senal: listo({
+    titulo: 'Título del video de ejemplo',
+    canal: 'Nombre del canal',
+    url: null,
+    imagen: null,
+    duracionSeg: null,
+    progresoSeg: null,
+    avance: 42,
+    viendoAhora: true,
+  }),
 };
 
 /* ============================================================
