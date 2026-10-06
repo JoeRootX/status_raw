@@ -69,6 +69,9 @@ export const COLA_TICKETS: Fuente<TicketEnCola[]> = {
 export type Reproduccion = {
   titulo: string;
   artista: string;
+  album?: string | null;
+  imagen?: string | null;
+  url?: string | null;
   avance: number;
 };
 
@@ -79,7 +82,14 @@ export type Video = {
 
 export const SPOTIFY: Fuente<Reproduccion> = {
   modo: 'manual',
-  senal: listo({ titulo: 'shelter', artista: 'Porter Robinson, Madeon', avance: 42 }),
+  senal: listo({
+    titulo: 'shelter',
+    artista: 'Porter Robinson, Madeon',
+    album: 'shelter',
+    imagen: null,
+    url: null,
+    avance: 42,
+  }),
 };
 
 export const YOUTUBE: Fuente<Video> = {
