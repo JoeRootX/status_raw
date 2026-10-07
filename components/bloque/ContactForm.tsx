@@ -2,55 +2,43 @@
 
 import { useRef, useState } from 'react';
 import Link from 'next/link';
+import { CAMPOS, REGLAS, type Campo } from '@/lib/validacion';
 
-type Campo = 'nombre' | 'telefono' | 'correo' | 'mensaje' | 'consentimiento';
+type CampoForm = Campo | 'consentimiento';
 
-/** Cada regla devuelve `true` o el texto del error. */
-type Regla = (valor: string, control: HTMLInputElement | HTMLTextAreaElement) => true | string;
-
-/**
- * Las cinco son deliberadamente tacanas: la validacion de verdad la hara el
- * servidor cuando exista la ruta `/api/contacto`, y estas son solo la primera linea
- * para no mandar basura por la red.
- */
-const REGLAS: Record<Campo, Regla> = {
-  nombre: (v) => v.trim().length >= 3 || 'Escribe tu nombre completo.',
-  telefono: (v) =>
-    (/^[+()\d\s-]+$/.test(v) && v.replace(/\D/g, '').length >= 10) ||
-    'Escribe un teléfono válido (10 dígitos o más).',
-  correo: (v) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim()) || 'Escribe un correo válido.',
-  mensaje: (v) => v.trim().length >= 10 || 'El mensaje es muy corto (mínimo 10 caracteres).',
-  consentimiento: (_v, control) =>
-    (control as HTMLInputElement).checked || 'Debes aceptar el Aviso de privacidad para enviar.',
-};
-
-const CAMPOS = Object.keys(REGLAS) as Campo[];
-
-type Errores = Partial<Record<Campo, string>>;
+type Errores = Partial<Record<CampoForm, string>>;
 type Fase = 'inicial' | 'enviando' | 'enviado' | 'error';
 
-const idDe = (campo: Campo) => `e-${campo}`;
+const idDe = (campo: CampoForm) => `e-${campo}`;
+
+const TEXTO_FALLA =
+  'No se pudo enviar. Inténtalo de nuevo o escríbeme al correo del pie de página.';
 
 /**
- * SIMULADO hasta que exista la ruta del servidor. El token del bot de Telegram NO
- * puede ir aqui: todo lo del navegador lo lee cualquiera que abra la pestana.
- * Cuando exista, esta funcion pasa a hacer POST a /api/contacto y el resto del
- * componente (validacion, estados, foco) no cambia.
+ * El envio de verdad es POST a /api/contacto: ahi se re-valida y ahi vive el
+ * token del bot de Telegram, que no puede ir nunca aqui — todo lo del
+ * navegador lo lee cualquiera que abra la pestana. Devuelve el texto de
+ * error a mostrar, o null si todo fue bien.
  */
-const ENVIAR_SIMULADO = 'ok'; // 'ok' | 'error' para probar los dos desenlaces
-
-function enviarSimulado(): Promise<void> {
-  return new Promise((resolver, rechazar) => {
-    setTimeout(() => {
-      if (ENVIAR_SIMULADO === 'ok') resolver();
-      else rechazar(new Error('simulado'));
-    }, 900);
-  });
+async function enviar(payload: Record<string, unknown>): Promise<string | null> {
+  try {
+    const respuesta = await fetch('/api/contacto', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (respuesta.ok) return null;
+    const datos = (await respuesta.json()) as { error?: unknown };
+    return typeof datos.error === 'string' && datos.error ? datos.error : TEXTO_FALLA;
+  } catch {
+    return TEXTO_FALLA;
+  }
 }
 
 export default function ContactForm() {
   const [errores, setErrores] = useState<Errores>({});
   const [fase, setFase] = useState<Fase>('inicial');
+  const [motivo, setMotivo] = useState('');
   const form = useRef<HTMLFormElement>(null);
 
   /** Devuelve los errores de todos los campos y el primero que falla, para enfocarlo. */
@@ -64,16 +52,23 @@ export default function ContactForm() {
     for (const campo of CAMPOS) {
       const control = el.elements.namedItem(campo);
       if (!(control instanceof HTMLInputElement || control instanceof HTMLTextAreaElement)) continue;
-      const resultado = REGLAS[campo](control.value, control);
+      const resultado = REGLAS[campo](control.value);
       if (resultado !== true) {
         collected[campo] = resultado;
         primero ??= control;
       }
     }
+
+    const consentimiento = el.elements.namedItem('consentimiento');
+    if (consentimiento instanceof HTMLInputElement && !consentimiento.checked) {
+      collected.consentimiento = 'Debes aceptar el Aviso de privacidad para enviar.';
+      primero ??= consentimiento;
+    }
+
     return { errores: collected, primero };
   }
 
-  function limpiar(campo: Campo) {
+  function limpiar(campo: CampoForm) {
     setErrores((previos) => (previos[campo] ? { ...previos, [campo]: undefined } : previos));
   }
 
@@ -83,6 +78,7 @@ export default function ContactForm() {
     if (!el || fase === 'enviando') return;
 
     if (fase !== 'inicial') setFase('inicial');
+    if (motivo) setMotivo('');
 
     const { errores: nuevos, primero } = comprobar();
     setErrores(nuevos);
@@ -98,19 +94,37 @@ export default function ContactForm() {
       return;
     }
 
+    const leer = (nombre: string) => {
+      const control = el.elements.namedItem(nombre);
+      return control instanceof HTMLInputElement || control instanceof HTMLTextAreaElement
+        ? control.value.trim()
+        : '';
+    };
+    const consentimiento = el.elements.namedItem('consentimiento');
+
     setFase('enviando');
-    try {
-      await enviarSimulado();
-      el.reset();
-      setErrores({});
-      setFase('enviado');
-    } catch {
+    const fallo = await enviar({
+      nombre: leer('nombre'),
+      telefono: leer('telefono'),
+      correo: leer('correo'),
+      mensaje: leer('mensaje'),
+      consentimiento: consentimiento instanceof HTMLInputElement && consentimiento.checked,
+      web: trampa instanceof HTMLInputElement ? trampa.value : '',
+    });
+
+    if (fallo) {
+      setMotivo(fallo);
       setFase('error');
+      return;
     }
+
+    el.reset();
+    setErrores({});
+    setFase('enviado');
   }
 
-  const err = (campo: Campo) => errores[campo];
-  const invalido = (campo: Campo) => (errores[campo] ? 'true' : undefined);
+  const err = (campo: CampoForm) => errores[campo];
+  const invalido = (campo: CampoForm) => (errores[campo] ? 'true' : undefined);
 
   return (
     <article className="card blurable" id="mensaje">
@@ -223,9 +237,7 @@ export default function ContactForm() {
           {fase === 'enviado' ? 'Mensaje enviado. Gracias, te respondo en cuanto pueda.' : null}
         </p>
         <p className="form-err" role="alert">
-          {fase === 'error'
-            ? 'No se pudo enviar. Inténtalo de nuevo o escríbeme al correo del pie de página.'
-            : null}
+          {fase === 'error' ? motivo || TEXTO_FALLA : null}
         </p>
       </form>
     </article>
