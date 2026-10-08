@@ -1,7 +1,7 @@
 # Contexto del proyecto joerootX
 
 ## Resumen ejecutivo
-Sitio de estado personal migrado de HTML estático a Next.js 16 + TypeScript 6.0.3 en la rama `next`. El commit actual en `next` es `c2e6aca` (3 commits sobre `main`).
+Sitio de estado personal en Next.js 16 + TypeScript 6.0.3. **Desplegado en Vercel**: https://status-raw.vercel.app (GitHub muestra datos reales en producción). Rama activa: `main`.
 
 ## Stack fijado
 - Next.js 16.3.8 (App Router, ISR con `revalidate = 300`)
@@ -103,9 +103,16 @@ capturas/              # 0375.png, 0768.png, 1440.png, legal.png
 2. Refresco en cliente (SSE o polling) sobre la misma caché.
 3. Texto legal: revisar con abogado → quitar `noindex`.
 
+## Despliegue (Vercel)
+- Proyecto: `status-raw` (org `joeroot-x`), vinculado con `.vercel/project.json` (ignorado).
+- URL: `https://status-raw.vercel.app` — **desplegado con `vercel --prod`**, prerenderizó con datos reales de GitHub (`bf21308`, `siiges-services · SDT-1768`).
+- Env vars en producción: `GITHUB_TOKEN` (Secret, inyectado desde `gh auth token` por tubería), `GITHUB_DUENIO=JoeRootX`, `GITHUB_EXCLUIR=status_raw`. Faltan ahí: Spotify/YouTube/Jira/Telegram (dashboard o `vercel env add`).
+- `vercel git connect` **no se pudo**: falta conectar GitHub como método de login en Vercel (dashboard → Settings → Login Connections). Mientras, desplegar manual: `vercel --prod`.
+- Deployment Protection (Vercel Authentication) **activa por defecto**: para curl público usar `vercel curl`. Puede desactivarse en dashboard (Settings → Deployment Protection).
+- Jira usa endpoint nuevo `POST /rest/api/3/search/jql` (el viejo `/search` devuelve 410).
+
 ## Estado actual del repo
-- Rama activa: `next` (3 commits sobre `main`)
-- `main` sigue en `48ceb1b` (sitio estático Capa B/C/D)
-- Servidor de producción detenido (puerto 3000 libre)
-- `.next/` y `node_modules/` ignorados
-- Token **nunca** en disco ni en commits; se inyecta vía `gh auth token` al proceso de dev/start para pruebas
+- Rama activa: `main` (sincronizada con `origin`); `next` quedó fusionada en `85ba623`.
+- `.next/`, `node_modules/`, `.vercel/`, `.env*` ignorados
+- Token **nunca** en disco ni en commits; se inyecta vía `gh auth token` al proceso para pruebas y ya está como Secret en Vercel.
+- Formulario: `/api/contacto` con entrega a Telegram (mock-first; sin `TELEGRAM_BOT_TOKEN` funciona simulado).
