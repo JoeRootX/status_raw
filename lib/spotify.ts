@@ -107,7 +107,12 @@ async function consultar(): Promise<Cancion | null> {
     { headers: encabezados, signal: AbortSignal.timeout(8_000) },
   );
 
-  if (ahora.ok) {
+  // 204 = nada sonando y SIN cuerpo: ahora.ok lo da por bueno, así que se
+  // corta por status antes de intentar `json()` sobre un body vacío (rompía
+  // con "Unexpected end of JSON input" y mataba el fallback a recientes).
+  if (ahora.status === 204) {
+    // sigue: último reproducido
+  } else if (ahora.ok) {
     const datos = (await ahora.json()) as EstadoReproduccion;
     if (datos.item) {
       return aCancion(datos.item, {
@@ -116,8 +121,8 @@ async function consultar(): Promise<Cancion | null> {
         actualizadoEn: new Date().toISOString(),
       });
     }
-  } else if (ahora.status !== 204) {
-    // 204 = nada sonando (normal); el resto (401/403/5xx) sí es fallo.
+  } else {
+    // Cualquier otro status (401/403/5xx) sí es fallo.
     throw new Error(`currently-playing ${ahora.status}`);
   }
 
