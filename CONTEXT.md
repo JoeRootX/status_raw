@@ -125,3 +125,6 @@ capturas/              # 0375.png, 0768.png, 1440.png, legal.png
 - `.next/`, `node_modules/`, `.vercel/`, `.env*` ignorados
 - Token **nunca** en disco ni en commits; se inyecta vía `gh auth token` al proceso para pruebas y ya está como Secret en Vercel.
 - Formulario: `/api/contacto` con entrega a Telegram (mock-first; sin `TELEGRAM_BOT_TOKEN` funciona simulado).
+## Spotify: BUG 204 encontrado y corregido
+- `currently-playing` contesta 204 con body vacio cuando no suena nada; `res.ok` da true y `json()` reventaba ("Unexpected end of JSON input"), matando el fallback a recientes. Fix: resolver por status===204 antes de parsear (commit 02fb094).
+- Spotify REAL en produccion desde oct 2026: SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET / SPOTIFY_REFRESH_TOKEN como Secrets en Vercel; valores locales en .env.local (gitignored).
