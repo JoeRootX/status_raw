@@ -106,10 +106,19 @@ capturas/              # 0375.png, 0768.png, 1440.png, legal.png
 ## Despliegue (Vercel)
 - Proyecto: `status-raw` (org `joeroot-x`), vinculado con `.vercel/project.json` (ignorado).
 - URL: `https://status-raw.vercel.app` — **desplegado con `vercel --prod`**, prerenderizó con datos reales de GitHub (`bf21308`, `siiges-services · SDT-1768`).
-- Env vars en producción: `GITHUB_TOKEN` (Secret, inyectado desde `gh auth token` por tubería), `GITHUB_DUENIO=JoeRootX`, `GITHUB_EXCLUIR=status_raw`. Faltan ahí: Spotify/YouTube/Jira/Telegram (dashboard o `vercel env add`).
+- Env vars en producción: `GITHUB_TOKEN` (Secret, inyectado desde `gh auth token` por tubería), `GITHUB_DUENIO=JoeRootX`, `GITHUB_EXCLUIR=status_raw`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID=1439778559`, `TELEGRAM_WEBHOOK_SECRET` (irrecuperable por diseño: si hace falta regenerarlo, env nueva → `vercel --prod` → `setWebhook` con el mismo valor). Faltan: Spotify/YouTube/Jira.
+- **Upstash Redis** (store `upstash-kv-citron-ball`) conectado al proyecto → `KV_REST_API_URL/TOKEN` (Production+Preview). Clave `estado` guarda el EstadoId actual.
+- **Estado por Telegram funcionando end to end**: @status123121bot → webhook `/api/telegram` (2 capas: header secreto + chat whitelisted) → Redis → ISR 5 min. `/estado`, `/estado <clave>`, `/trabajo /personal /libre /comer /junta`. Dale `/libre` al bot y la página gira a "Libre" en ≤5 min.
+- Deployment Protection **bajada** (producción pública; `ssoProtection: preview") — camdo con `PATCH /v13/projects` (`ssoProtection`} no `/v9`.
 - `vercel git connect` **no se pudo**: falta conectar GitHub como método de login en Vercel (dashboard → Settings → Login Connections). Mientras, desplegar manual: `vercel --prod`.
-- Deployment Protection (Vercel Authentication) **activa por defecto**: para curl público usar `vercel curl`. Puede desactivarse en dashboard (Settings → Deployment Protection).
 - Jira usa endpoint nuevo `POST /rest/api/3/search/jql` (el viejo `/search` devuelve 410).
+
+## Telegram: gotchas probados
+- El webhook exige `Content-Type: application/json` y solo responde a updates reales de Telegram (header secreto).
+- Env vars Secret NO se pueden leer de vuelta (`vercel env pull` trae `[SENSITIVE]`; `GET /v9/.../env/{id}` tampoco). Guardar el valor o regenerarlo alineando los tres pasos.
+- `setWebhook` rechaza secretos con caracteres fuera de `[A-Za-z0-9_-]` ("Illegal characters") — el generador de Vercel (`openssl rand -hex`) produce hex, pero cualquier `=` o `+`/`/` del base64 falla.
+- El redeploy tras cambiar el Secret es **obligatorio**: las env se hornean en el deployment; si cambias la env después, Telegram reintenta (backoff creciente) y los updates quedan en cola hasta que el deployment lleva el mismo secreto.
+- ISR cookie: la primera pinta tras un build puede estar desfasada respecto a Redis hasta 5 min (ISR normal).
 
 ## Estado actual del repo
 - Rama activa: `main` (sincronizada con `origin`); `next` quedó fusionada en `85ba623`.
