@@ -128,3 +128,7 @@ capturas/              # 0375.png, 0768.png, 1440.png, legal.png
 ## Spotify: BUG 204 encontrado y corregido
 - `currently-playing` contesta 204 con body vacio cuando no suena nada; `res.ok` da true y `json()` reventaba ("Unexpected end of JSON input"), matando el fallback a recientes. Fix: resolver por status===204 antes de parsear (commit 02fb094).
 - Spotify REAL en produccion desde oct 2026: SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET / SPOTIFY_REFRESH_TOKEN como Secrets en Vercel; valores locales en .env.local (gitignored).
+
+## YouTube REAL en produccion (oct 2026)
+- YOUTUBE_API_KEY (restringible a YouTube Data API v3) + YOUTUBE_CHANNEL_ID como Secrets en Vercel.
+- Fuente: playlistItems sobre la playlist de subidas (UC->UU); muestra el ultimo video publicado, no lo que ves en vivo (la API publica no lo expone).
