@@ -10,6 +10,7 @@ import Identidad from '@/components/bloque/Identidad';
 import InfoCards from '@/components/bloque/InfoCards';
 import Multimedia from '@/components/bloque/Multimedia';
 import Reloj from '@/components/bloque/Reloj';
+import Refresco from '@/components/bloque/Refresco';
 
 /**
  * Cinco minutos. Es lo que tarda GitHub en devolver los datos y lo que aguanta un
@@ -38,6 +39,8 @@ export default async function Inicio() {
           en el body desde un componente, y al declararse --st en este elemento
           todo lo que cuelga lo hereda igual. De ahi `[data-state="..."]` en el CSS. */}
       <main data-state={estado}>
+        {/* Auto-refresco: sondea /api/estado cada 30 s y re-renderiza si cambió. */}
+        <Refresco estado={estado} />
         {/* CENTRO: identidad, estado y trabajo en curso */}
         <section className="center">
           <Identidad estado={estado} />

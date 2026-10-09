@@ -10,7 +10,7 @@ export const ESTADOS = {
   work: { etiqueta: 'Trabajo', titulo: 'En trabajo · No molestar', lema: 'Enfocado en lo que importa.' },
   personal: { etiqueta: 'Personal', titulo: 'Proyecto personal', lema: 'Nada urgente, escríbeme.' },
   free: { etiqueta: 'Libre', titulo: 'Libre', lema: 'Buen momento para escribirme.' },
-  eat: { etiqueta: 'Comiendo / Baño', titulo: 'Comiendo / Baño', lema: 'Vuelvo en un rato.' },
+  eat: { etiqueta: 'Ausente', titulo: 'Ausente', lema: 'Vuelvo en un rato.' },
   meet: { etiqueta: 'Junta', titulo: 'En junta', lema: 'Respondo al salir.' },
 } as const;
 

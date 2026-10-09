@@ -29,6 +29,7 @@ const ALIAS: Record<string, EstadoId> = {
   eat: 'eat',
   comer: 'eat',
   comiendo: 'eat',
+  ausente: 'eat',
   meet: 'meet',
   junta: 'meet',
 };
