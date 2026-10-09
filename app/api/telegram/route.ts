@@ -9,8 +9,9 @@
  * Comandos: `/estado` (ver), `/estado <clave>` y los directos en español.
  */
 
+import { revalidateTag } from 'next/cache';
 import { ESTADOS, ORDEN_ESTADOS, type EstadoId } from '@/lib/datos';
-import { ESTADO_REDIS_KEY, estadoVivo, redisSet } from '@/lib/estado';
+import { ESTADO_REDIS_KEY, TAG_ESTADO, estadoVivo, redisSet } from '@/lib/estado';
 
 export const revalidate = 0;
 
@@ -123,6 +124,7 @@ export async function POST(request: Request) {
       const destino = argumento ? ALIAS[argumento] : undefined;
       if (destino) {
         const guardado = await redisSet(ESTADO_REDIS_KEY, destino);
+        if (guardado) revalidateTag(TAG_ESTADO, "max");
         await contestar(
           chatId,
           guardado
@@ -138,6 +140,7 @@ export async function POST(request: Request) {
     const directo = sinBarra ? ALIAS[sinBarra] : undefined;
     if (directo) {
       const guardado = await redisSet(ESTADO_REDIS_KEY, directo);
+      if (guardado) revalidateTag(TAG_ESTADO, "max");
       await contestar(
         chatId,
         guardado
