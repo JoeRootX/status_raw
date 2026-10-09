@@ -11,6 +11,20 @@ function Barra({ avance }: { avance: number }) {
   );
 }
 
+/**
+ * El thumb por defecto es el degradado del CSS. Cuando la fuente trae portada
+ * (álbum de Spotify, miniatura de YouTube), la pinta encima con
+ * background-size: cover — sin petición extra, la URL ya viene en los datos.
+ */
+function Thumb({ imagen }: { imagen?: string | null }) {
+  return (
+    <div
+      className="thumb"
+      style={imagen ? { backgroundImage: `url(${imagen})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
+    />
+  );
+}
+
 type Props = {
   spotify: Fuente<Cancion>;
   youtube: Fuente<Video>;
@@ -29,7 +43,7 @@ export default function Multimedia({ spotify, youtube }: Props) {
               <>
                 <small>{cancion.escuchandoAhora ? 'Reproduciendo…' : 'Última canción…'}</small>
                 <div className="media-card">
-                  <div className="thumb" aria-hidden={cancion.imagen ? 'false' : 'true'} />
+                  <Thumb imagen={cancion.imagen} />
                   <div>
                     <strong>{cancion.titulo}</strong>
                     <br />
@@ -51,7 +65,7 @@ export default function Multimedia({ spotify, youtube }: Props) {
               <>
                 <small>{video.viendoAhora ? 'Reproduciendo…' : 'Último video…'}</small>
                 <div className="media-card">
-                  <div className="thumb" aria-hidden={video.imagen ? 'false' : 'true'} />
+                  <Thumb imagen={video.imagen ?? null} />
                   <div>
                     <strong>{video.titulo}</strong>
                     <br />
