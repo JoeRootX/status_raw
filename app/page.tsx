@@ -1,8 +1,8 @@
-import { ESTADO_ACTUAL } from '@/lib/datos';
 import { ultimoCommit } from '@/lib/github';
 import { cancionActual } from '@/lib/spotify';
 import { videoActual } from '@/lib/youtube';
 import { colaTickets, ticketActual } from '@/lib/jira';
+import { estadoActual } from '@/lib/estado';
 import ChipsEstado from '@/components/bloque/ChipsEstado';
 import ContactForm from '@/components/bloque/ContactForm';
 import Footer from '@/components/bloque/Footer';
@@ -18,6 +18,7 @@ import Reloj from '@/components/bloque/Reloj';
 export const revalidate = 300;
 
 export default async function Inicio() {
+  const estado = await estadoActual();
   const [commit, spotify, youtube, ticket, cola] = await Promise.all([
     ultimoCommit(),
     cancionActual(),
@@ -36,12 +37,12 @@ export default async function Inicio() {
       {/* data-state va aqui y no en <body>: en React no se puede poner un atributo
           en el body desde un componente, y al declararse --st en este elemento
           todo lo que cuelga lo hereda igual. De ahi `[data-state="..."]` en el CSS. */}
-      <main data-state={ESTADO_ACTUAL}>
+      <main data-state={estado}>
         {/* CENTRO: identidad, estado y trabajo en curso */}
         <section className="center">
-          <Identidad estado={ESTADO_ACTUAL} />
+          <Identidad estado={estado} />
           <InfoCards commit={commit} ticketActual={ticket} colaTickets={cola} />
-          <ChipsEstado actual={ESTADO_ACTUAL} />
+          <ChipsEstado actual={estado} />
         </section>
 
         {/* IZQUIERDA: Spotify + YouTube */}
