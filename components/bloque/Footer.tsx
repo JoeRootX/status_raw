@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { CORREO } from '@/lib/datos';
+import { CORREO, WHATSAPP } from '@/lib/datos';
 import { esExterno, LEGALES, REDES, type Enlace } from '@/lib/enlaces';
 
 function Item({ texto, href }: Enlace) {
@@ -28,6 +28,13 @@ export default function Footer() {
           <Item key={enlace.texto} {...enlace} />
         ))}
         <a href={`mailto:${CORREO}`}>{CORREO}</a>
+        {/* Click-to-chat: abre WhatsApp del teléfono, sin pasar por el servidor.
+            Sin número configurado no se pinta nada (cero placeholders falsos). */}
+        {WHATSAPP ? (
+          <a href={`https://wa.me/${WHATSAPP}`} target="_blank" rel="noreferrer">
+            WhatsApp
+          </a>
+        ) : null}
       </nav>
       <nav aria-label="Redes">
         {REDES.map((enlace) => (

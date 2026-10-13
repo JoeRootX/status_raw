@@ -118,10 +118,12 @@ export const YOUTUBE: Fuente<Video> = {
    con robots noindex. Los corchetes son huecos reales.
    ============================================================ */
 
-export const CORREO = 'correo@ejemplo.com';
+export const CORREO = 'joeroot.dev@gmail.com';
+/** Número de WhatsApp con país (ej. '523312345678'). Vacío = sin botón en el pie. */
+export const WHATSAPP = '';
 export const NOMBRE = '[NOMBRE COMPLETO]';
 export const DOMICILIO = '[DOMICILIO]';
-export const FECHA_ACTUALIZACION = '[FECHA]';
+export const FECHA_ACTUALIZACION = '13 de octubre de 2026';
 
 /* ============================================================
    TEXTOS DE ESTADO VACIO / ERROR

@@ -41,8 +41,20 @@ export default function TerminosYCondiciones() {
             ignorar o bloquear mensajes abusivos.
           </p>
 
+          <h2>Contacto directo</h2>
+          <p>
+            Además del formulario puedes escribirme por los canales del pie de página: correo
+            electrónico ({CORREO}) o WhatsApp, que abre tu app con el chat directo a mí; ahí el
+            trato de datos lo hace WhatsApp conforme a sus propios términos.
+          </p>
+
           <h2>Propiedad y enlaces</h2>
-          <p>[DEFINIR propiedad del contenido y responsabilidad por enlaces a terceros.]</p>
+          <p>
+            El contenido de este sitio (textos, diseño y código) me pertenece. Los enlaces de
+            referencia a terceros (Spotify, YouTube, GitHub, Jira, Telegram y similares) se
+            ofrecen tal cual: no controlo su contenido ni sus políticas, y la actividad que
+            muestran es información pública de esas plataformas.
+          </p>
 
           <h2>Cambios y contacto</h2>
           <p>
