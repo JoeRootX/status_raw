@@ -121,8 +121,10 @@ export const YOUTUBE: Fuente<Video> = {
 export const CORREO = 'joeroot.dev@gmail.com';
 /** Número de WhatsApp con país (ej. '523312345678'). Vacío = sin botón en el pie. */
 export const WHATSAPP = '';
-export const NOMBRE = '[NOMBRE COMPLETO]';
-export const DOMICILIO = '[DOMICILIO]';
+/* Responsable genérico a propósito: el sitio personal expone como titular al
+   sitio mismo, no al nombre ni domicilio de la persona. */
+export const NOMBRE = 'El titular del sitio joerootX';
+export const DOMICILIO = 'Jalisco, México';
 export const FECHA_ACTUALIZACION = '13 de octubre de 2026';
 
 /* ============================================================

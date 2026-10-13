@@ -1,15 +1,11 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { CORREO, DOMICILIO, FECHA_ACTUALIZACION, NOMBRE } from '@/lib/datos';
-import AvisoDelBorrador from '@/components/legal/AvisoDelBorrador';
 import Reloj from '@/components/bloque/Reloj';
 
 export const metadata: Metadata = {
   title: 'Aviso de privacidad · joerootX',
   description: 'Qué datos se recaban al escribir por el formulario de contacto y para qué se usan.',
-  // El texto sigue con corchetes y sin revision legal: no debe indexarse hasta
-  // que un abogado lo valide.
-  robots: { index: false, follow: true },
 };
 
 export default function AvisoDePrivacidad() {
@@ -23,7 +19,6 @@ export default function AvisoDePrivacidad() {
       <main className="main--legal">
         <article className="legal">
           <h1>Aviso de privacidad</h1>
-          <AvisoDelBorrador />
 
           <h2>Responsable</h2>
           <p>

@@ -112,15 +112,19 @@ async function porRSS(feedUrl: string): Promise<Video | null> {
 
 // ---------- Data API (respaldo) ----------
 
-/** null = el canal todavía no publicó nada. Lanza si la API contesta mal. */
-async function porDataAPI(channelId: string, apiKey: string): Promise<Video | null> {
+/**
+ * Data API playlistItems: no admite orderBy, así que pido varios y ordeno por
+ * fecha de alta en la playlist (snippet.publishedAt = cuando se agregó, no
+ * cuándo se publicó el video) — para una playlist "lo que comparto" el último
+ * agregado es el que interesa, aunque el video sea viejo. Sirve tanto para la
+ * playlist de subidas de un canal (UC…→UU…) como para cualquier playlist
+ * pública dada por id.
+ */
+async function porDataAPI(playlistId: string, apiKey: string): Promise<Video | null> {
   const url = new URL('https://www.googleapis.com/youtube/v3/playlistItems');
   url.search = new URLSearchParams({
     part: 'snippet',
-    // La lista de "subidas" de un canal es una playlist interna cuyo id es el
-    // del canal `UC...` con el prefijo cambiado a `UU...`.
-    playlistId: channelId.startsWith('UC') ? `UU${channelId.slice(2)}` : channelId,
-    // El endpoint no admite orderBy: pido varios y ordeno por fecha aquí.
+    playlistId: playlistId.startsWith('UC') ? `UU${playlistId.slice(2)}` : playlistId,
     maxResults: '10',
     key: apiKey,
   }).toString();
@@ -147,11 +151,16 @@ async function consultar(): Promise<Video | null> {
   const creds = credenciales();
   if (!creds) return null;
 
-  // 1) RSS de la playlist personal (lo que comparto), si la configuré.
+  // 1) Playlist personal (lo que comparto), si la configuré. Algunas playlists
+  //    no tienen feed RSS (404) y a otras puede caérselos: el dato puro en
+  //    cualquier caso aguanta por el respaldo con la API key.
   if (creds.playlistId) {
-    const video = await porRSS(`https://www.youtube.com/feeds/videos.xml?playlist_id=${creds.playlistId}`);
-    if (video) return video;
-    // playlist vacía o feed raro: sigo con el respaldo
+    const playlistRSS = await porRSS(`https://www.youtube.com/feeds/videos.xml?playlist_id=${creds.playlistId}`).catch(() => null);
+    if (playlistRSS) return playlistRSS;
+    if (creds.apiKey) {
+      const playlistAPI = await porDataAPI(creds.playlistId, creds.apiKey).catch(() => null);
+      if (playlistAPI) return playlistAPI;
+    }
   }
 
   // 2) RSS del canal: subidas en orden real, sin cuota.
@@ -160,7 +169,7 @@ async function consultar(): Promise<Video | null> {
     if (video) return video;
   }
 
-  // 3) Data API solo si hay key: orden de playlist manual corregido por fecha.
+  // 3) Último recurso con key: subidas del canal ordenadas por publicación.
   if (creds.apiKey && creds.channelId) {
     return porDataAPI(creds.channelId, creds.apiKey);
   }

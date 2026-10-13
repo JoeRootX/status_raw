@@ -1,13 +1,11 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { CORREO, FECHA_ACTUALIZACION } from '@/lib/datos';
-import AvisoDelBorrador from '@/components/legal/AvisoDelBorrador';
 import Reloj from '@/components/bloque/Reloj';
 
 export const metadata: Metadata = {
   title: 'Términos y condiciones · joerootX',
   description: 'Qué muestra este sitio, cómo se usa el formulario de contacto y qué responsabilidades hay.',
-  robots: { index: false, follow: true },
 };
 
 export default function TerminosYCondiciones() {
@@ -21,7 +19,6 @@ export default function TerminosYCondiciones() {
       <main className="main--legal">
         <article className="legal">
           <h1>Términos y condiciones</h1>
-          <AvisoDelBorrador />
 
           <h2>Qué es este sitio</h2>
           <p>
