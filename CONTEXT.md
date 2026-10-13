@@ -76,6 +76,7 @@ capturas/              # 0375.png, 0768.png, 1440.png, legal.png
   - 4 estados formulario, honeypot, noindex legal, 16 anchos, 3 quiebres
   - GitHub: sha contrastado vs API, enlace commit correcto, `status_raw` ausente, tiempo relativo ES, sin token en HTML
   - 3 degradaciones: sin token → ejemplo; token inválido → error con `role="alert"` sin tumbar página; GitHub caído → error
+- Ronda oct 2026 sobre producción (44/44 checks, script en /tmp, sin commit): Jira real contrastado ticket por ticket vs API directa (SDT-1768 + cola SDT-1683…1687, todos assignee = joel.duran@jalisco.gob.mx), GitHub sha vs API, Spotify/YouTube coherentes con /api/*, чips ↔ /api/estado, formulario con envío real (llega a Telegram; honeypot descartado; rate-limit "Espera un minuto" funciona), legales con noindex, 3 anchos sin overflow, reduced-motion en 0s
 
 ## Configuración de despliegue
 - Hosting: Vercel (requerido para server-side tokens + ISR)
