@@ -58,10 +58,10 @@ capturas/              # 0375.png, 0768.png, 1440.png, legal.png
 | Multimedia | Mock | `lib/datos.ts` |
 | Formulario | Simulado | `SIMULAR='ok'` en componente |
 | **GitHub** | **Real** | `lib/github.ts` → GraphQL 1 petición, 20 repos × 50 refs, `status_raw` excluido, `revalidate=300` |
-| Spotify | Pendiente | — |
-| YouTube | Pendiente | — |
-| Jira real | Pendiente | — |
-| Estado Telegram | Pendiente | — |
+| Spotify | Real | `lib/spotify.ts` + `app/api/spotify` |
+| YouTube | Real (último video publicado) | `lib/youtube.ts` + `app/api/youtube` |
+| Jira real | Real | `lib/jira.ts` + `app/api/jira` |
+| Estado Telegram | Real | `lib/telegram.ts` → webhook → Redis → ISR |
 
 ## GitHub (fuente real implementada)
 - `lib/github.ts`: enumera repos del owner → filtra `GITHUB_EXCLUIR` (default `status_raw`) → GraphQL con 20 alias, `refs(first:50)` → aplanar → ordenar por `committedDate` descendente → mapear a `Commit` (mensaje, sha7, repo, rama, ticket si `SDT-\d+`, autor, `haceCuando(fecha)`, url).
@@ -106,7 +106,9 @@ capturas/              # 0375.png, 0768.png, 1440.png, legal.png
 ## Despliegue (Vercel)
 - Proyecto: `status-raw` (org `joeroot-x`), vinculado con `.vercel/project.json` (ignorado).
 - URL: `https://status-raw.vercel.app` — **desplegado con `vercel --prod`**, prerenderizó con datos reales de GitHub (`bf21308`, `siiges-services · SDT-1768`).
-- Env vars en producción: `GITHUB_TOKEN` (Secret, inyectado desde `gh auth token` por tubería), `GITHUB_DUENIO=JoeRootX`, `GITHUB_EXCLUIR=status_raw`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID=1439778559`, `TELEGRAM_WEBHOOK_SECRET` (irrecuperable por diseño: si hace falta regenerarlo, env nueva → `vercel --prod` → `setWebhook` con el mismo valor). Faltan: Spotify/YouTube/Jira.
+- Env vars en producción: `GITHUB_TOKEN` (Secret, inyectado desde `gh auth token` por tubería), `GITHUB_DUENIO=JoeRootX`, `GITHUB_EXCLUIR=status_raw`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID=1439778559`, `TELEGRAM_WEBHOOK_SECRET` (irrecuperable por diseño: si hace falta regenerarlo, env nueva → `vercel --prod` → `setWebhook` con el mismo valor).
+
+- **Jira REAL en producción (oct 2026)**: `JIRA_BASE_URL=https://sicyt-projects.atlassian.net`, `JIRA_EMAIL` (correo del PAT) y `JIRA_API_TOKEN` como Secrets en Vercel; valores locales en .env.local (gitignored). Endpoint nuevo `POST /rest/api/3/search/jql` (el viejo `/search` devuelve 410). JQL por defecto `assignee = currentUser() AND statusCategory = ...` sobreescribible con `JIRA_JQL_ACTUAL`/`JIRA_JQL_COLA`. Deuda conocida: también hay más tareas "To Do" (isLast=false) — la cola muestra solo la primera página.
 - **Upstash Redis** (store `upstash-kv-citron-ball`) conectado al proyecto → `KV_REST_API_URL/TOKEN` (Production+Preview). Clave `estado` guarda el EstadoId actual.
 - **Estado por Telegram funcionando end to end**: @status123121bot → webhook `/api/telegram` (2 capas: header secreto + chat whitelisted) → Redis → ISR 5 min. `/estado`, `/estado <clave>`, `/trabajo /personal /libre /comer /junta`. Dale `/libre` al bot y la página gira a "Libre" en ≤5 min.
 - Deployment Protection **bajada** (producción pública; `ssoProtection: preview") — camdo con `PATCH /v13/projects` (`ssoProtection`} no `/v9`.
