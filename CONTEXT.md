@@ -59,7 +59,7 @@ capturas/              # 0375.png, 0768.png, 1440.png, legal.png
 | Formulario | Simulado | `SIMULAR='ok'` en componente |
 | **GitHub** | **Real** | `lib/github.ts` → GraphQL 1 petición, 20 repos × 50 refs, `status_raw` excluido, `revalidate=300` |
 | Spotify | Real | `lib/spotify.ts` + `app/api/spotify` |
-| YouTube | Real (último video publicado) | `lib/youtube.ts` + `app/api/youtube` |
+| YouTube | Real (RSS keyless: playlist `YOUTUBE_PLAYLIST_ID` o canal; Data API solo respaldo ordenado por fecha) | `lib/youtube.ts` + `app/api/youtube` |
 | Jira real | Real | `lib/jira.ts` + `app/api/jira` |
 | Estado Telegram | Real | `lib/telegram.ts` → webhook → Redis → ISR |
 
@@ -132,6 +132,14 @@ capturas/              # 0375.png, 0768.png, 1440.png, legal.png
 - `currently-playing` contesta 204 con body vacio cuando no suena nada; `res.ok` da true y `json()` reventaba ("Unexpected end of JSON input"), matando el fallback a recientes. Fix: resolver por status===204 antes de parsear (commit 02fb094).
 - Spotify REAL en produccion desde oct 2026: SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET / SPOTIFY_REFRESH_TOKEN como Secrets en Vercel; valores locales en .env.local (gitignored).
 
-## YouTube REAL en produccion (oct 2026)
-- YOUTUBE_API_KEY (restringible a YouTube Data API v3) + YOUTUBE_CHANNEL_ID como Secrets en Vercel.
-- Fuente: playlistItems sobre la playlist de subidas (UC->UU); muestra el ultimo video publicado, no lo que ves en vivo (la API publica no lo expone).
+## YouTube REAL en produccion (oct 2026) — ahora por RSS keyless
+- YOUTUBE_CHANNEL_ID (Secret, ya en Vercel) + opcional YOUTUBE_PLAYLIST_ID (aún sin valor; cuando exista la playlist pública "lo que comparto" se inyecta en Vercel). YOUTUBE_API_KEY queda solo como respaldo.
+- Fuente primaria: feed RSS `feeds/videos.xml?playlist_id=…` o `?channel_id=…` (sin cuota, llega ordenado por publicación real — playlistItems devolvía el orden manual de la playlist). Respaldo: Data API playlistItems pidiendo 10 y ordenando por publishedAt en código. Sin canal/playlist → mock.
+- Etiqueta de la tarjeta: "Último video visto…". El canal hoy solo tiene 2 videos; el más nuevo por fecha real de publicación es "¿Quieres ser mi novia?" (2021) — ver un video de OTRO canal requiere la playlist personal (pendiente `PL…` del usuario).
+
+## WhatsApp (oct 2026, esperando número)
+- `WHATSAPP` en lib/datos.ts (vacío hoy) → si se llena ('52……'), Footer pinta botón `wa.me` click-to-chat; sin número no se pinta nada. El chat ocurre en el teléfono: el servidor no trata datos.
+
+## Legal oct 2026 (a medias)
+- Resueltos: CORREO=joeroot.dev@gmail.com (aviso, términos, mailto del footer), FECHA_ACTUALIZACION='13 de octubre de 2026', corchetes de terceros (Telegram + WhatsApp)/conservación/ARCO/propiedad de enlaces.
+- Bloqueado: quitar noindex requiere NOMBRE legal + DOMICILIO (lib/datos.ts). El AvisoDelBorrador y `robots: {index:false}` siguen hasta entonces.
