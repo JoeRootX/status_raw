@@ -12,9 +12,6 @@ export type Video = {
   viendoAhora: boolean;
 };
 
-const API_KEY = process.env.YOUTUBE_API_KEY;
-const CHANNEL_ID = process.env.YOUTUBE_CHANNEL_ID;
-
 export const VIDEO_DE_EJEMPLO: Video = {
   titulo: 'Título del video de ejemplo',
   canal: 'Nombre del canal',
@@ -22,9 +19,9 @@ export const VIDEO_DE_EJEMPLO: Video = {
   imagen: null,
   duracionSeg: null,
   progresoSeg: null,
-  avance: 42,
+  avance: 0,
   actualizadoEn: new Date().toISOString(),
-  viendoAhora: true,
+  viendoAhora: false,
 };
 
 type ItemPlaylist = {
@@ -40,54 +37,135 @@ type ItemPlaylist = {
 type RespuestaPlaylist = { items?: ItemPlaylist[] };
 
 function credenciales() {
-  if (!API_KEY || !CHANNEL_ID) return null;
-  return { apiKey: API_KEY, channelId: CHANNEL_ID };
+  const apiKey = process.env.YOUTUBE_API_KEY;
+  const channelId = process.env.YOUTUBE_CHANNEL_ID;
+  const playlistId = process.env.YOUTUBE_PLAYLIST_ID;
+  if (!playlistId && !channelId) return null;
+  return { apiKey, channelId: channelId ?? '', playlistId };
 }
 
-/**
- * La lista de "subidas" de un canal es una playlist interna cuyo id es el del
- * canal `UC...` con el prefijo cambiado a `UU...`. Si llega cualquier otro id
- * (por ejemplo ya `UU...`), se usa tal cual.
- */
-function playlistDeSubidas(channelId: string): string {
-  return channelId.startsWith('UC') ? `UU${channelId.slice(2)}` : channelId;
+// ---------- RSS ----------
+//
+// playlistItems (Data API) NO respeta fecha: devuelve el primer item de la
+// playlist de subidas en su orden manual (un video viejo fijado arriba queda
+// "último" para siempre). El feed RSS de canal/playlist sí llega ordenado por
+// publicación y además no gasta cuota ni pide API key. Empieza por RSS y cae
+// a la Data API (pidiendo varios y ordenando por fecha, como hicimos con
+// GitHub) solo si el RSS falla.
+
+function decodificar(texto: string): string {
+  return texto
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
 }
 
-/** null = el canal todavía no publicó nada. Lanza si la API contesta mal. */
-async function consultar(): Promise<Video | null> {
-  const creds = credenciales();
-  if (!creds) return null;
+type Entrada = { videoId: string; titulo: string; canal: string; publicado: string };
 
-  const url = new URL('https://www.googleapis.com/youtube/v3/playlistItems');
-  url.search = new URLSearchParams({
-    part: 'snippet',
-    playlistId: playlistDeSubidas(creds.channelId),
-    maxResults: '1',
-    key: creds.apiKey,
-  }).toString();
+/** Primer `<entry>` del feed RSS de canal o playlist (el más nuevo publicado). */
+function primeraEntrada(xml: string): Entrada | null {
+  const bloque = ((xml.split('<entry>')[1] ?? '').split('</entry>')[0]) ?? '';
+  const videoId = /<yt:videoId>([^<]+)<\/yt:videoId>/.exec(bloque)?.[1];
+  const titulo = decodificar(/<title>([^<]+)<\/title>/.exec(bloque)?.[1] ?? '');
+  const publicado = /<published>([^<]+)<\/published>/.exec(bloque)?.[1] ?? '';
+  const canal = decodificar(/<author>[\s\S]*?<name>([^<]+)<\/name>/.exec(bloque)?.[1] ?? '');
+  if (!videoId || !titulo) return null;
+  return { videoId, titulo, canal, publicado };
+}
 
-  const respuesta = await fetch(url, { signal: AbortSignal.timeout(8_000) });
-  if (!respuesta.ok) throw new Error(`playlistItems ${respuesta.status}`);
-
-  const datos = (await respuesta.json()) as RespuestaPlaylist;
-  const ultimo = datos.items?.[0]?.snippet;
-  const videoId = ultimo?.resourceId?.videoId;
-  if (!ultimo || !videoId) return null;
-
+function aVideo(entrada: Entrada): Video {
   return {
-    titulo: ultimo.title ?? 'Video sin título',
-    canal: ultimo.channelTitle ?? '',
-    url: `https://www.youtube.com/watch?v=${videoId}`,
-    imagen: ultimo.thumbnails?.high?.url ?? ultimo.thumbnails?.medium?.url ?? null,
+    titulo: entrada.titulo,
+    canal: entrada.canal,
+    url: `https://www.youtube.com/watch?v=${entrada.videoId}`,
+    // La miniatura canónica del video va directa; el feed la trae pero en
+    // versión default (baja) como primer media:thumbnail.
+    imagen: `https://i.ytimg.com/vi/${entrada.videoId}/hqdefault.jpg`,
     // La duración exigiría una segunda llamada (videos?part=contentDetails);
     // sin ella la barra de progreso no tiene de qué hablar, y la API pública
     // tampoco expone lo que alguien esté viendo ahora.
     duracionSeg: null,
     progresoSeg: null,
     avance: 0,
-    actualizadoEn: ultimo.publishedAt ?? new Date().toISOString(),
+    actualizadoEn: entrada.publicado || new Date().toISOString(),
     viendoAhora: false,
   };
+}
+
+/**
+ * El feed https://www.youtube.com/feeds/videos.xml?playlist_id=… comparte
+ * videos que marque como "lo que comparto/viengo" si PLAYLIST_ID apunta a una
+ * playlist pública adminstrada por mí; sin ella cae al feed del canal (sus
+ * subidas, ya en orden real).
+ */
+async function porRSS(feedUrl: string): Promise<Video | null> {
+  const respuesta = await fetch(feedUrl, {
+    headers: { Accept: 'application/atom+xml, application/xml, text/xml' },
+    signal: AbortSignal.timeout(8_000),
+  });
+  if (!respuesta.ok) throw new Error(`RSS ${respuesta.status}`);
+  const entrada = primeraEntrada(await respuesta.text());
+  return entrada ? aVideo(entrada) : null;
+}
+
+// ---------- Data API (respaldo) ----------
+
+/** null = el canal todavía no publicó nada. Lanza si la API contesta mal. */
+async function porDataAPI(channelId: string, apiKey: string): Promise<Video | null> {
+  const url = new URL('https://www.googleapis.com/youtube/v3/playlistItems');
+  url.search = new URLSearchParams({
+    part: 'snippet',
+    // La lista de "subidas" de un canal es una playlist interna cuyo id es el
+    // del canal `UC...` con el prefijo cambiado a `UU...`.
+    playlistId: channelId.startsWith('UC') ? `UU${channelId.slice(2)}` : channelId,
+    // El endpoint no admite orderBy: pido varios y ordeno por fecha aquí.
+    maxResults: '10',
+    key: apiKey,
+  }).toString();
+
+  const respuesta = await fetch(url, { signal: AbortSignal.timeout(8_000) });
+  if (!respuesta.ok) throw new Error(`playlistItems ${respuesta.status}`);
+  const datos = (await respuesta.json()) as RespuestaPlaylist;
+
+  const mejor = (datos.items ?? [])
+    .map((item) => item.snippet)
+    .filter((s): s is NonNullable<typeof s> => Boolean(s?.resourceId?.videoId))
+    .sort((a, b) => (b.publishedAt ?? '').localeCompare(a.publishedAt ?? ''))[0];
+  if (!mejor) return null;
+
+  return aVideo({
+    videoId: mejor.resourceId!.videoId!,
+    titulo: mejor.title ?? 'Video sin título',
+    canal: mejor.channelTitle ?? '',
+    publicado: mejor.publishedAt ?? '',
+  });
+}
+
+async function consultar(): Promise<Video | null> {
+  const creds = credenciales();
+  if (!creds) return null;
+
+  // 1) RSS de la playlist personal (lo que comparto), si la configuré.
+  if (creds.playlistId) {
+    const video = await porRSS(`https://www.youtube.com/feeds/videos.xml?playlist_id=${creds.playlistId}`);
+    if (video) return video;
+    // playlist vacía o feed raro: sigo con el respaldo
+  }
+
+  // 2) RSS del canal: subidas en orden real, sin cuota.
+  if (creds.channelId) {
+    const video = await porRSS(`https://www.youtube.com/feeds/videos.xml?channel_id=${creds.channelId}`);
+    if (video) return video;
+  }
+
+  // 3) Data API solo si hay key: orden de playlist manual corregido por fecha.
+  if (creds.apiKey && creds.channelId) {
+    return porDataAPI(creds.channelId, creds.apiKey);
+  }
+
+  return null;
 }
 
 export async function videoActual(): Promise<Fuente<Video>> {
@@ -98,7 +176,7 @@ export async function videoActual(): Promise<Fuente<Video>> {
   try {
     const video = await consultar();
     if (!video) {
-      return { modo: 'auto', senal: vacio('Este canal todavía no tiene videos publicados.') };
+      return { modo: 'auto', senal: vacio('Todavía no hay videos publicados.') };
     }
     return { modo: 'auto', senal: listo(video) };
   } catch (error) {

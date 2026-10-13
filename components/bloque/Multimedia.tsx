@@ -63,7 +63,7 @@ export default function Multimedia({ spotify, youtube }: Props) {
           <Estado senal={youtube.senal}>
             {(video) => (
               <>
-                <small>{video.viendoAhora ? 'Reproduciendo…' : 'Último video…'}</small>
+                <small>{video.viendoAhora ? 'Reproduciendo…' : 'Último video visto…'}</small>
                 <div className="media-card">
                   <Thumb imagen={video.imagen ?? null} />
                   <div>
