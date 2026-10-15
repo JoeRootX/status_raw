@@ -25,7 +25,7 @@ export const TAG_ESTADO = 'estado';
 type OpcionesCache = { revalidate?: number; tags?: string[] };
 
 /** GET /get/<clave> en el REST de Redis. Devuelve null si no hay nada o falla. */
-async function redisGet(clave: string, cache: OpcionesCache = {}): Promise<string | null> {
+export async function redisGet(clave: string, cache: OpcionesCache = {}): Promise<string | null> {
   if (!conectado()) return null;
   const respuesta = await fetch(new URL(`/get/${encodeURIComponent(clave)}`, REST_URL), {
     headers: { Authorization: `Bearer ${REST_TOKEN}` },

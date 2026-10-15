@@ -70,7 +70,7 @@ export default function Multimedia({ spotify, youtube }: Props) {
                     <strong>{video.titulo}</strong>
                     <br />
                     <small>{video.canal}</small>
-                    <Barra avance={video.avance ?? 42} />
+                    <Barra avance={video.avance} />
                   </div>
                 </div>
               </>

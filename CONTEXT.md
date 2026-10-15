@@ -137,6 +137,20 @@ capturas/              # 0375.png, 0768.png, 1440.png, legal.png
 - Cadena: RSS de playlist → Data API playlistItems por FECHA DE ALTA (snippet.publishedAt = cuando se agregó; "Sugeridos" NO tiene feed RSS: 404) → RSS del canal → Data API subidas (UC→UU) ordenadas por publicación. El último agregado a la playlist es el que pinta la tarjeta.
 - Etiqueta de la tarjeta: "Último video visto…". Acceso a lo que VES en YouTube (watch history) no existe en API pública.
 
+## Rutina oct 2026 (solo Lun-Vie): horario laboral + avisos del bot
+
+- **9:00 (L-V)**: arranca la jornada — el panel gira a `work` (mismo mecanismo del bot: `redisSet('estado')` + `revalidateTag(TAG_ESTADO, { expire: 0 })`) y avisa por Telegram.
+- **11:00, 13:00, 15:00 (L-V)**: sondeo "¿Sigues trabajando?" con botones inline (Trabajo/Personal/Libre/Ausente/Junta/"Sigo así").
+- **17:00 (L-V)**: pregunta de salida. Sin respuesta el estado NO cambia (decisión del usuario).
+- **19:00, 21:00 (L-V)**: seguimiento "¿Sigues en <estado actual>?".
+- **22:00–08:59 y sáb/dom**: nada. El silencio pedido (23:00–05:00) queda cubierto de sobra.
+- Botón "Sigo así" solo acusa recibo (toast) sin tocar el estado; los demás cambian el estado por el mismo camino que los comandos (ahora unificado en `cambiarEstado()` del webhook, que además atiende `callback_query`).
+- `lib/rutina.ts`: hora SIEMPRE en `America/Mexico_City` vía `Intl` (offset fijo UTC-6 desde 2022; el servidor de Vercel vive en UTC — `getHours()` daría otra hora). `accionRutina(hora, diaSemana)` decide; noche/fin de semana → null. `idDeSlot` = fecha+hora para la antiduplicación.
+- `app/api/rutina/route.ts` (nuevo): golpeado por cron externo. Capa 1 `Authorization: Bearer RUTINA_SECRETO`; capa 2 el guardia de hora/día; luego reclama el slot (`redisSet('rutina_ultimo', slot)`) para que los reintentos no dupliquen el aviso. 200 siempre salvo el 401.
+- Env nueva: `RUTINA_SECRETO` (local + Secret en Vercel; doc en .env.example).
+- Cron (schedule de QStash en la cuenta Upstash que ya existe por Redis): apunta a `https://status-raw.vercel.app/api/rutina` con ese header; cron UTC `0 15,17,19,21,23,1,3 * * *` = 9,11,13,15,17,19,21 de Jalisco. Crear en QStash console → Schedules (o API con QSTASH_TOKEN).
+- Tests: tabla de slots (todas las horas × Dom/Lun/Jue/Sáb), guardia 401/200 local y `horaLocal` contrastado con el reloj real.
+
 ## WhatsApp (oct 2026, esperando número)
 - `WHATSAPP` en lib/datos.ts (vacío hoy) → si se llena ('52……'), Footer pinta botón `wa.me` click-to-chat; sin número no se pinta nada. El chat ocurre en el teléfono: el servidor no trata datos.
 

@@ -7,10 +7,12 @@
  * leyendo el cuerpo se entra. Ambas capas se validan antes de tocar Redis.
  *
  * Comandos: `/estado` (ver), `/estado <clave>` y los directos en español.
+ * Además atiende `callback_query`: los botones de los avisos programados por
+ * el horario laboral (`/api/rutina` + lib/rutina.ts) responden aquí.
  */
 
 import { revalidateTag } from 'next/cache';
-import { ESTADOS, ORDEN_ESTADOS, type EstadoId } from '@/lib/datos';
+import { ESTADOS, ORDEN_ESTADOS, esEstadoId, type EstadoId } from '@/lib/datos';
 import { ESTADO_REDIS_KEY, TAG_ESTADO, estadoVivo, redisSet } from '@/lib/estado';
 
 export const revalidate = 0;
@@ -49,7 +51,22 @@ type Mensaje = {
   text?: string;
 };
 
-type Update = { message?: Mensaje };
+type Update = {
+  message?: Mensaje;
+  /* Botones de los avisos programados (lib/rutina.ts): data "estado:<id>" o "estado:sigo". */
+  callback_query?: {
+    id: string;
+    data?: string;
+    message?: Mensaje;
+  };
+};
+
+/** Telegram antepone el usuario del bot en grupos: "/libre@status123121bot". */
+function limpiarComando(texto: string): string[] {
+  return texto
+    .split(/\s+/)
+    .map((parte) => parte.replace(/@[^@]*$/, ''));
+}
 
 /** Escapa para el modo HTML de Telegram (los mensajes del webhook usan parse_mode). */
 function escapar(texto: string): string {
@@ -93,6 +110,41 @@ async function contestar(chatId: number, texto: string): Promise<void> {
   }
 }
 
+/** answerCallbackQuery apaga el "cargando" del mensaje con botones y deja una
+    confirmación en toast. Sin él el botón queda colgado en el cliente. */
+async function responderBoton(callbackId: string, text?: string): Promise<void> {
+  if (!TOKEN) return;
+  try {
+    const respuesta = await fetch(`https://api.telegram.org/bot${TOKEN}/answerCallbackQuery`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ callback_query_id: callbackId, ...(text ? { text } : {}) }),
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (!respuesta.ok) console.error('[telegram-webhook] answerCallbackQuery falló:', respuesta.status);
+  } catch (error) {
+    console.error('[telegram-webhook] sin respuesta de Telegram (callback):', error);
+  }
+}
+
+/** Cambia el estado en Redis y purga el cache; lo usan los comandos y los botones. */
+async function cambiarEstado(destino: EstadoId, chatId: number): Promise<boolean> {
+  const guardado = await redisSet(ESTADO_REDIS_KEY, destino);
+  if (guardado) {
+    // expire: 0 = la siguiente peticion BLOQUEA hasta revalidar: el cambio
+    // se ve de inmediato. Con "max" la primera peticion se sirve stale
+    // (stale-while-revalidate) y el poller vea el estado viejo un ciclo mas.
+    revalidateTag(TAG_ESTADO, { expire: 0 });
+  }
+  await contestar(
+    chatId,
+    guardado
+      ? `Estado actualizado: <b>${etiquetaDe(destino)}</b> ✅`
+      : 'No se alcanzó el almacenamiento. Intenta de nuevo.',
+  );
+  return guardado;
+}
+
 export async function POST(request: Request) {
   // Capa 1: el secreto lo pone Telegram (set_webhook) y nadie más lo conoce.
   if (SECRETO && request.headers.get('x-telegram-bot-api-secret-token') !== SECRETO) {
@@ -107,20 +159,52 @@ export async function POST(request: Request) {
   }
 
   const mensaje = update.message;
-  const chatId = mensaje?.chat?.id;
-  const texto = mensaje?.text?.trim().toLowerCase() ?? '';
-  if (!chatId || !texto) return Response.json({ ok: true, motivo: 'sin mensaje' });
+  const callback = update.callback_query;
+  const chatId = mensaje?.chat?.id ?? callback?.message?.chat?.id;
+  if (!chatId) return Response.json({ ok: true, motivo: 'sin mensaje' });
 
   // Capa 2: solo el chat de Joe cambia cosas.
   if (CHAT_ID && chatId !== CHAT_ID) {
-    await contestar(chatId, 'Este bot solo atiende a Joe. 🤫');
+    if (callback) await responderBoton(callback.id, 'Este bot solo atiende a Joe. 🤫');
+    else await contestar(chatId, 'Este bot solo atiende a Joe. 🤫');
     return Response.json({ ok: true, motivo: 'chat no autorizado' });
   }
 
+  // Botones de los avisos programados: "estado:sigo" no cambia nada,
+  // "estado:<id>" es lo mismo que mandar el comando a mano.
+  if (callback) {
+    try {
+      const [prefijo = '', valor = ''] = (callback.data ?? '').split(':');
+      if (prefijo !== 'estado' || !valor) {
+        await responderBoton(callback.id);
+        return Response.json({ ok: true, motivo: 'callback desconocido' });
+      }
+      if (valor === 'sigo') {
+        await responderBoton(callback.id, 'Anotado ✅');
+        return Response.json({ ok: true, motivo: 'sigo igual' });
+      }
+      if (!esEstadoId(valor)) {
+        await responderBoton(callback.id);
+        return Response.json({ ok: true, motivo: 'estado desconocido' });
+      }
+      const guardado = await cambiarEstado(valor, chatId);
+      await responderBoton(
+        callback.id,
+        guardado ? `Estado actualizado: ${etiquetaDe(valor)} ✅` : 'No se pudo guardar',
+      );
+      return Response.json({ ok: guardado, motivo: 'estado cambiado' });
+    } catch (error) {
+      console.error('[telegram-webhook] error procesando callback:', error);
+      await responderBoton(callback.id, 'Algo falló, intenta de nuevo');
+      return Response.json({ ok: false, motivo: 'error interno' }, { status: 200 });
+    }
+  }
+
+  const texto = mensaje?.text?.trim().toLowerCase() ?? '';
+  if (!texto) return Response.json({ ok: true, motivo: 'sin mensaje' });
+
   // Telegram antepone el usuario del bot en grupos: "/libre@status123121bot".
-  const [comando = '', argumento = ''] = texto
-    .split(/\s+/)
-    .map((parte) => parte.replace(/@[^@]*$/, ''));
+  const [comando = '', argumento = ''] = limpiarComando(texto);
   const sinBarra = comando.startsWith('/') ? comando.slice(1) : comando;
 
   try {
@@ -142,19 +226,7 @@ export async function POST(request: Request) {
       }
       const destino = argumento ? ALIAS[argumento] : undefined;
       if (destino) {
-        const guardado = await redisSet(ESTADO_REDIS_KEY, destino);
-        if (guardado) {
-          // expire: 0 = la siguiente peticion BLOQUEA hasta revalidar: el cambio
-          // se ve de inmediato. Con "max" la primera peticion se sirve stale
-          // (stale-while-revalidate) y el poller vea el estado viejo un ciclo mas.
-          revalidateTag(TAG_ESTADO, { expire: 0 });
-        }
-        await contestar(
-          chatId,
-          guardado
-            ? `Estado actualizado: <b>${etiquetaDe(destino)}</b> ✅`
-            : 'No se alcanzó el almacenamiento. Intenta de nuevo.',
-        );
+        const guardado = await cambiarEstado(destino, chatId);
         return Response.json({ ok: guardado, motivo: 'estado cambiado' });
       }
       await contestar(chatId, enumMensaje(await estadoVivo(), `<b>${escapar(argumento)}</b> no es un estado válido.`));
@@ -163,14 +235,7 @@ export async function POST(request: Request) {
 
     const directo = sinBarra ? ALIAS[sinBarra] : undefined;
     if (directo) {
-      const guardado = await redisSet(ESTADO_REDIS_KEY, directo);
-      if (guardado) revalidateTag(TAG_ESTADO, { expire: 0 });
-      await contestar(
-        chatId,
-        guardado
-          ? `Estado actualizado: <b>${etiquetaDe(directo)}</b> ✅`
-          : 'No se alcanzó el almacenamiento. Intenta de nuevo.',
-      );
+      const guardado = await cambiarEstado(directo, chatId);
       return Response.json({ ok: guardado, motivo: 'estado cambiado' });
     }
 
