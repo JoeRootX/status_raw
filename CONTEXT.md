@@ -141,6 +141,7 @@ capturas/              # 0375.png, 0768.png, 1440.png, legal.png
 - `WHATSAPP` en lib/datos.ts (vacío hoy) → si se llena ('52……'), Footer pinta botón `wa.me` click-to-chat; sin número no se pinta nada. El chat ocurre en el teléfono: el servidor no trata datos.
 
 ## Ronda de revision oct 2026 (post-despliegue): bugs + fluides + seguridad
+- **COMMITADA y DESPLEGADA** el 15 oct 2026 (commit `2fc75af` → push a origin/main → `vercel --prod`, deployment `status-7w23l9329`). Verificado en producción: CSP + X-Frame-Options DENY + nosniff + Referrer-Policy + Permissions-Policy presentes, `/api/estado`, `/api/spotify` y `/api/youtube` contestando datos reales.
 - **revalidateTag(TAG_ESTADO, { expire: 0 })** en el webhook (antes "max"): con "max" la primera peticion tras cambiar el estado se servia STALE (stale-while-revalidate) y el poller veia el estado viejo un ciclo extra (~30-60 s). Con expire:0 la siguiente peticion bloquea hasta revalidar: el cambio se ve al instante. Esta era la causa del "se actualiza mal".
 - **.tag.alta / .tag.critica** en globals.css: Jira real trae High/Critical y las tags salian sin color (solo existian .media y .baja).
 - page.tsx: las 6 fuentes (estado incluido) en un solo Promise.all, antes el estado se esperaba aparte y habia cascada.
