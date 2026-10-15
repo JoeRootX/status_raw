@@ -149,6 +149,11 @@ capturas/              # 0375.png, 0768.png, 1440.png, legal.png
 - `app/api/rutina/route.ts` (nuevo): golpeado por cron externo. Capa 1 `Authorization: Bearer RUTINA_SECRETO`; capa 2 el guardia de hora/día; luego reclama el slot (`redisSet('rutina_ultimo', slot)`) para que los reintentos no dupliquen el aviso. 200 siempre salvo el 401.
 - Env nueva: `RUTINA_SECRETO` (local + Secret en Vercel; doc en .env.example).
 - Cron (schedule de QStash en la cuenta Upstash que ya existe por Redis): apunta a `https://status-raw.vercel.app/api/rutina` con ese header; cron UTC `0 15,17,19,21,23,1,3 * * *` = 9,11,13,15,17,19,21 de Jalisco. Crear en QStash console → Schedules (o API con QSTASH_TOKEN).
+  **Pasos exactos** (QStash Console → Schedules → Create Schedule):
+  1. Destination URL: `https://status-raw.vercel.app/api/rutina` (método POST).
+  2. Cron: `0 15,17,19,21,23,1,3 * * *` (la consola lo interpreta en UTC; el endpoint valida la hora local de verdad).
+  3. Headers: `Authorization: Bearer <valor de RUTINA_SECRETO>` (está en .env.local local; el mismo valor ya es Secret en Vercel desde el 15 oct 2026). Sin ese header el endpoint contesta 401.
+  4. Probar con "Send test": fuera de los slots contesta `{"ok":true,"motivo":"fuera de horario"}` 200 — correcto; dentro de slot manda el aviso y reclama el slot en Redis.
 - Tests: tabla de slots (todas las horas × Dom/Lun/Jue/Sáb), guardia 401/200 local y `horaLocal` contrastado con el reloj real.
 
 ## WhatsApp (oct 2026, esperando número)
