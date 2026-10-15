@@ -19,8 +19,10 @@ import Refresco from '@/components/bloque/Refresco';
 export const revalidate = 300;
 
 export default async function Inicio() {
-  const estado = await estadoActual();
-  const [commit, spotify, youtube, ticket, cola] = await Promise.all([
+  // Las seis fuentes en paralelo: el estado no depende de las demas, asi que
+  // esperar primero la suya y luego el resto alargaba la primera pinta sin motivo.
+  const [estado, commit, spotify, youtube, ticket, cola] = await Promise.all([
+    estadoActual(),
     ultimoCommit(),
     cancionActual(),
     videoActual(),

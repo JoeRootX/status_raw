@@ -140,6 +140,17 @@ capturas/              # 0375.png, 0768.png, 1440.png, legal.png
 ## WhatsApp (oct 2026, esperando número)
 - `WHATSAPP` en lib/datos.ts (vacío hoy) → si se llena ('52……'), Footer pinta botón `wa.me` click-to-chat; sin número no se pinta nada. El chat ocurre en el teléfono: el servidor no trata datos.
 
+## Ronda de revision oct 2026 (post-despliegue): bugs + fluides + seguridad
+- **revalidateTag(TAG_ESTADO, { expire: 0 })** en el webhook (antes "max"): con "max" la primera peticion tras cambiar el estado se servia STALE (stale-while-revalidate) y el poller veia el estado viejo un ciclo extra (~30-60 s). Con expire:0 la siguiente peticion bloquea hasta revalidar: el cambio se ve al instante. Esta era la causa del "se actualiza mal".
+- **.tag.alta / .tag.critica** en globals.css: Jira real trae High/Critical y las tags salian sin color (solo existian .media y .baja).
+- page.tsx: las 6 fuentes (estado incluido) en un solo Promise.all, antes el estado se esperaba aparte y habia cascada.
+- lib/spotify.ts: cache del access token a nivel de modulo (expires_in - 60 s de margen); antes un ida a accounts.spotify.com por render.
+- Refresco.tsx: sondeo inmediato en visibilitychange y solo con pestaña visible (menos peticiones muertas en segundo plano).
+- Webhook Telegram: escapar() en argumento/comando interpolados en parse_mode HTML (un < colgaba el sendMessage); console.warn en production si faltan TELEGRAM_WEBHOOK_SECRET o TELEGRAM_CHAT_ID (las capas se desactivaban en silencio).
+- next.config.ts: cabeceras de seguridad (CSP conservadora, X-Frame-Options DENY, nosniff, Referrer-Policy, Permissions-Policy). La CSP necesita style-src 'unsafe-inline' (Thumb con background inline) y script-src 'unsafe-inline' (bootstrap App Router); img-src: i.scdn.co + i.ytimg.com (los thumbs via CSS background caen en img-src).
+- Limpieza: rutas duplicadas /api/spotify/now y /api/youtube/now eliminadas (eran byte a byte iguales a /api/spotify y /api/youtube); mocks muertos de lib/datos.ts (TICKET_ACTUAL, COLA_TICKETS, SPOTIFY, YOUTUBE + tipos) eliminados — los ejemplos reales viven en cada lib; index.html.bak movido a legacy/.
+- Verificado: tsc + eslint + next build limpios; smoke test local con credenciales reales (Spotify y Jira contestaron datos reales; cabeceras presentes; /api/estado ok).
+
 ## Legal oct 2026 (COMPLETO)
 - CORREO=joeroot.dev@gmail.com (aviso, términos, mailto), FECHA_ACTUALIZACION='13 de octubre de 2026', Terceros (Telegram + WhatsApp), Conservación, ARCO y propiedad/enlaces redactados.
 - NOMBRE='El titular del sitio joerootX' + DOMICILIO='Jalisco, México' (genérico a pedido del usuario: no expone su nombre/domicilio personal).

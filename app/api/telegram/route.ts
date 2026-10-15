@@ -19,6 +19,16 @@ const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const CHAT_ID = Number(process.env.TELEGRAM_CHAT_ID);
 const SECRETO = process.env.TELEGRAM_WEBHOOK_SECRET;
 
+/**
+ * Las dos capas de seguridad se anulan solas si falta su env (capa 1 se saltaria
+ * el header secreto; capa 2 dejaria pasar cualquier chat). Sin matar el webhook
+ * en dev, mejor un aviso ruidoso en logs que un silencio.
+ */
+if (process.env.NODE_ENV === 'production') {
+  if (!SECRETO) console.warn('[telegram-webhook] TELEGRAM_WEBHOOK_SECRET no definida: la capa 1 (header secreto) esta desactivada.');
+  if (!CHAT_ID) console.warn('[telegram-webhook] TELEGRAM_CHAT_ID no definida: la capa 2 (chat whitelisted) esta desactivada.');
+}
+
 /** Alias en español (y claves crudas) para cambiar el estado. */
 const ALIAS: Record<string, EstadoId> = {
   work: 'work',
@@ -40,6 +50,14 @@ type Mensaje = {
 };
 
 type Update = { message?: Mensaje };
+
+/** Escapa para el modo HTML de Telegram (los mensajes del webhook usan parse_mode). */
+function escapar(texto: string): string {
+  return texto
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
 
 /** Mensajita de confirmación con la lista que ya existe en datos.ts. */
 function etiquetaDe(id: EstadoId): string {
@@ -125,7 +143,12 @@ export async function POST(request: Request) {
       const destino = argumento ? ALIAS[argumento] : undefined;
       if (destino) {
         const guardado = await redisSet(ESTADO_REDIS_KEY, destino);
-        if (guardado) revalidateTag(TAG_ESTADO, "max");
+        if (guardado) {
+          // expire: 0 = la siguiente peticion BLOQUEA hasta revalidar: el cambio
+          // se ve de inmediato. Con "max" la primera peticion se sirve stale
+          // (stale-while-revalidate) y el poller vea el estado viejo un ciclo mas.
+          revalidateTag(TAG_ESTADO, { expire: 0 });
+        }
         await contestar(
           chatId,
           guardado
@@ -134,14 +157,14 @@ export async function POST(request: Request) {
         );
         return Response.json({ ok: guardado, motivo: 'estado cambiado' });
       }
-      await contestar(chatId, enumMensaje(await estadoVivo(), `<b>${argumento}</b> no es un estado válido.`));
+      await contestar(chatId, enumMensaje(await estadoVivo(), `<b>${escapar(argumento)}</b> no es un estado válido.`));
       return Response.json({ ok: true, motivo: 'estado desconocido' });
     }
 
     const directo = sinBarra ? ALIAS[sinBarra] : undefined;
     if (directo) {
       const guardado = await redisSet(ESTADO_REDIS_KEY, directo);
-      if (guardado) revalidateTag(TAG_ESTADO, "max");
+      if (guardado) revalidateTag(TAG_ESTADO, { expire: 0 });
       await contestar(
         chatId,
         guardado
@@ -151,7 +174,7 @@ export async function POST(request: Request) {
       return Response.json({ ok: guardado, motivo: 'estado cambiado' });
     }
 
-    await contestar(chatId, enumMensaje(await estadoVivo(), `No reconozco <b>${comando}</b>.`));
+    await contestar(chatId, enumMensaje(await estadoVivo(), `No reconozco <b>${escapar(comando)}</b>.`));
     return Response.json({ ok: true, motivo: 'comando desconocido' });
   } catch (error) {
     console.error('[telegram-webhook] error procesando:', error);

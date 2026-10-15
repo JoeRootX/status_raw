@@ -54,8 +54,18 @@ function credenciales() {
   return { clientId: CLIENT_ID, clientSecret: CLIENT_SECRET, refreshToken: REFRESH_TOKEN };
 }
 
+/**
+ * Cache del access token a nivel de modulo: dura una hora en Spotify y con esto
+ * la instancia caliente reutiliza ~55 min en vez de pedir uno por cada render,
+ * que era una ida extra a accounts.spotify.com en cada ciclo ISR/poll.
+ */
+let tokenCache: { valor: string; expira: number } | null = null;
+
 /** Intercambia el refresh token por un access token de uso corto. */
 async function tokenAcceso(c: NonNullable<ReturnType<typeof credenciales>>): Promise<string> {
+  // Margen de 60 s para no despistar una peticion con el token a punto de vencer.
+  if (tokenCache && Date.now() < tokenCache.expira) return tokenCache.valor;
+
   const basico = Buffer.from(`${c.clientId}:${c.clientSecret}`).toString('base64');
   const respuesta = await fetch('https://accounts.spotify.com/api/token', {
     method: 'POST',
@@ -70,8 +80,12 @@ async function tokenAcceso(c: NonNullable<ReturnType<typeof credenciales>>): Pro
     signal: AbortSignal.timeout(8_000),
   });
   if (!respuesta.ok) throw new Error(`token ${respuesta.status}`);
-  const datos = (await respuesta.json()) as { access_token?: string };
+  const datos = (await respuesta.json()) as { access_token?: string; expires_in?: number };
   if (!datos.access_token) throw new Error('token sin access_token');
+  tokenCache = {
+    valor: datos.access_token,
+    expira: Date.now() + (datos.expires_in ?? 3600) * 1000 - 60_000,
+  };
   return datos.access_token;
 }
 

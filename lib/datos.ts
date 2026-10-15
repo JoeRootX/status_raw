@@ -1,5 +1,3 @@
-import { listo, type Fuente } from './fuente';
-
 /* ============================================================
    ESTADOS
    El estado lo cambia Joe con un bot de Telegram, nunca el
@@ -27,95 +25,7 @@ export const esEstadoId = (v: string): v is EstadoId => Object.hasOwn(ESTADOS, v
 export const ESTADO_ACTUAL: EstadoId = 'work';
 
 /* ============================================================
-   JIRA
-   ============================================================ */
-
-export type TicketActual = {
-  clave: string;
-  resumen: string;
-};
-
-export type TicketEnCola = {
-  clave: string;
-  resumen: string;
-  prioridad: 'media' | 'baja';
-};
-
-export const TICKET_ACTUAL: Fuente<TicketActual> = {
-  modo: 'manual',
-  senal: listo({ clave: 'SDT-1738', resumen: 'Crear Endpoints para los nuevos tipos de solicitudes' }),
-};
-
-export const COLA_TICKETS: Fuente<TicketEnCola[]> = {
-  modo: 'manual',
-  senal: listo([
-    { clave: 'SDT-1742', resumen: 'Ajustes en validaciones', prioridad: 'media' },
-    { clave: 'SDT-1741', resumen: 'Corrección en módulo', prioridad: 'media' },
-    { clave: 'SDT-1739', resumen: 'Notificaciones en tiempo real', prioridad: 'baja' },
-  ]),
-};
-
-/* ============================================================
-   GITHUB
-   El commit ya no vive aqui: lo pide la API de GitHub, asi que
-   lo trae `ultimoCommit()` en lib/github.ts. El dato de ejemplo
-   que se usa sin token tambien esta ahi.
-   ============================================================ */
-
-/* ============================================================
-   MULTIMEDIA
-   ============================================================ */
-
-export type Reproduccion = {
-  titulo: string;
-  artista: string;
-  album?: string | null;
-  imagen?: string | null;
-  url?: string | null;
-  avance: number;
-};
-
-export type Video = {
-  titulo: string;
-  canal: string;
-  url?: string | null;
-  imagen?: string | null;
-  duracionSeg?: number | null;
-  progresoSeg?: number | null;
-  avance?: number;
-  viendoAhora?: boolean;
-};
-
-export const SPOTIFY: Fuente<Reproduccion> = {
-  modo: 'manual',
-  senal: listo({
-    titulo: 'shelter',
-    artista: 'Porter Robinson, Madeon',
-    album: 'shelter',
-    imagen: null,
-    url: null,
-    avance: 42,
-  }),
-};
-
-export const YOUTUBE: Fuente<Video> = {
-  modo: 'manual',
-  senal: listo({
-    titulo: 'Título del video de ejemplo',
-    canal: 'Nombre del canal',
-    url: null,
-    imagen: null,
-    duracionSeg: null,
-    progresoSeg: null,
-    avance: 42,
-    viendoAhora: true,
-  }),
-};
-
-/* ============================================================
    LEGAL
-   Hasta que un abogado revise el texto, estas rutas se sirven
-   con robots noindex. Los corchetes son huecos reales.
    ============================================================ */
 
 export const CORREO = 'joeroot.dev@gmail.com';
@@ -135,3 +45,9 @@ export const FECHA_ACTUALIZACION = '13 de octubre de 2026';
 
 export const ERROR_POR_DEFECTO = 'No se pudo cargar esta informacion.';
 export const SIN_DATOS_POR_DEFECTO = 'Sin datos por ahora.';
+
+/* Nota: los datos de Jira, Spotify, YouTube y GitHub ya no viven aqui. Cada
+   fuente tiene su modulo real (lib/jira.ts, lib/spotify.ts, lib/youtube.ts,
+   lib/github.ts) con su propio valor de ejemplo para cuando faltan credenciales
+   (patron mock-first). Los mocks duplicados de este archivo llevaban meses sin
+   usarse y confundian: la tarjeta de Jira pintaba "SDT-1738" que ya no existia. */
