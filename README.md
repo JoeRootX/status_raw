@@ -136,10 +136,18 @@ El horario laboral (L-V: 9:00–17:00) también mueve el estado:
 
 La lógica vive en `lib/rutina.ts` y el endpoint que dispara el cron externo es
 `app/api/rutina/route.ts`. La hora SIEMPRE se calcula en `America/Mexico_City`
-con `Intl` — el server de Vercel vive en UTC. El cron (schedule de QStash en la
-consola de Upstash) apunta a `/api/rutina` con el header
-`Authorization: Bearer <RUTINA_SECRETO>` y la expresión
-`0 15,17,19,21,23,1,3 * * *` (UTC = las horas de Jalisco listadas arriba).
+con `Intl` — el server de Vercel vive en UTC.
+
+Para activar el cron hace falta crear el schedule en QStash (consola de Upstash)
+**una sola vez**, con tu `QSTASH_TOKEN` (consola.upstash.com → QStash → API Keys):
+
+```bash
+QSTASH_TOKEN=qstash_xxx npm run cron:setup
+```
+
+El script es idempotente: crea el schedule apuntando a `/api/rutina` con el
+header `Authorization: Bearer <RUTINA_SECRETO>` (lo lee de `.env.local`) y la
+expresión `0 15,17,19,21,23,1,3 * * *` (UTC = las horas de Jalisco de la tabla).
 
 ## Verificación
 
