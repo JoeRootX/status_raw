@@ -138,16 +138,17 @@ La lógica vive en `lib/rutina.ts` y el endpoint que dispara el cron externo es
 `app/api/rutina/route.ts`. La hora SIEMPRE se calcula en `America/Mexico_City`
 con `Intl` — el server de Vercel vive en UTC.
 
-Para activar el cron hace falta crear el schedule en QStash (consola de Upstash)
-**una sola vez**, con tu `QSTASH_TOKEN` (consola.upstash.com → QStash → API Keys):
+Para activar el cron basta el workflow de GitHub Actions que ya vive en
+`.github/workflows/rutina.yml`: corre el mismo cron que antes configurábamos en
+QStash (`0 15,17,19,21,23,1,3 * * *` UTC) y golpea `/api/rutina` con el secret
+`RUTINA_SECRETO` del repo (mismo valor que la env de Vercel). El cron de Actions
+puede atrasarse unos minutos — no importa: el slot se reclama por hora en Redis
+y el endpoint valida la hora local. Fin de semana: el endpoint ignora el
+disparo, así que el workflow puede correr 7 días sin molestar.
 
-```bash
-QSTASH_TOKEN=qstash_xxx npm run cron:setup
-```
-
-El script es idempotente: crea el schedule apuntando a `/api/rutina` con el
-header `Authorization: Bearer <RUTINA_SECRETO>` (lo lee de `.env.local`) y la
-expresión `0 15,17,19,21,23,1,3 * * *` (UTC = las horas de Jalisco de la tabla).
+De referencia queda `scripts/cron-setup.mjs` (`npm run cron:setup`), el
+equivalente con QStash si algún día Actions dejara de servir (necesita
+`QSTASH_TOKEN` en la variable de entorno).
 
 ## Verificación
 
@@ -159,10 +160,6 @@ arregló) vive en `CONTEXT.md`; el historial queda en los commits.
 
 ## Pendiente
 
-- **Crear el schedule de QStash** (2 min en la consola de Upstash) para activar
-  los avisos del horario laboral — ver la sección de arriba.
-  El endpoint ya está en producción y probado (401 sin secreto, 200 dentro de
-  horario).
 - **Conectar GitHub ↔ Vercel** en el dashboard (Settings → Login Connections):
   mientras no exista, desplegar con `vercel --prod` a mano.
 - **Enlaces de redes del pie.** `lib/enlaces.ts` los tiene en `href: null` y
