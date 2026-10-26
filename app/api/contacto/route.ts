@@ -6,7 +6,8 @@ export const revalidate = 0;
 /**
  * Límite por IP: un envío por minuto. Mapa en memoria, suficiente en dev y
  * en Vercel (cada instancia pone el suyo: limitado, pero corta el spam
- * evidente). Los intentos cuentan, no solo los exitosos.
+ * evidente). Solo cuentan los envíos que pasan la validación; así corregir
+ * un campo con un error no bloquea al visitante durante un minuto.
  */
 const ULTIMOS_ENVIOS = new Map<string, number>();
 const VENTANA_MS = 60_000;

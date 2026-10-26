@@ -14,10 +14,27 @@ const mono = JetBrains_Mono({
   display: 'swap',
 });
 
+const DESCRIPCION =
+  'Panel de estado personal de Joe: estado actual, ticket en curso, cola de Jira, último commit, Spotify, YouTube y contacto directo.';
+
 export const metadata: Metadata = {
+  metadataBase: new URL('https://status-raw.vercel.app'),
   title: 'joerootX',
-  description:
-    'Estado actual de Joe: ticket en curso, cola de Jira, último commit y contacto directo.',
+  description: DESCRIPCION,
+  alternates: { canonical: '/' },
+  openGraph: {
+    type: 'website',
+    locale: 'es_MX',
+    url: '/',
+    siteName: 'joerootX',
+    title: 'joerootX',
+    description: DESCRIPCION,
+  },
+  twitter: {
+    card: 'summary',
+    title: 'joerootX',
+    description: DESCRIPCION,
+  },
 };
 
 export const viewport: Viewport = {

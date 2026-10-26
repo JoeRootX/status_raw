@@ -1,178 +1,218 @@
 # Contexto del proyecto joerootX
 
 ## Resumen ejecutivo
-Sitio de estado personal en Next.js 16 + TypeScript 6.0.3. **Desplegado en Vercel**: https://status-raw.vercel.app (GitHub muestra datos reales en producción). Rama activa: `main`.
+Panel de estado personal en Next.js 16 + TypeScript 6.0.3. **Desplegado en Vercel**:
+https://status-raw.vercel.app. Repo: https://github.com/JoeRootX/status_raw. Rama activa:
+`main`. Última revisión: 26 de octubre de 2026.
 
 ## Stack fijado
-- Next.js 16.3.8 (App Router, ISR con `revalidate = 300`)
+- Next.js **16.4.3** (App Router, ISR con `revalidate = 300`)
 - React 19.3.0
 - TypeScript 6.0.3 (no 7; `typescript-eslint` exige `<6.1.0`)
-- ESLint 9 + `eslint-config-next@16.3.8`
+- ESLint 9 + `eslint-config-next@16.4.3`
+- Node `>=20.9.0` (`engines` en `package.json`)
 - CSS nativo (sin Tailwind); `next/font` para JetBrains Mono + Inter
+- Vercel (hosting) + Upstash Redis (estado y slots de la rutina)
 
 ## Estructura clave
 ```
 app/
-  layout.tsx           # providers, metadata, viewport, next/font
-  page.tsx             # async, revalidate=300, llama ultimoCommit()
-  globals.css          # CSS completo migrado del HTML verificado
+  layout.tsx                 # metadata, Open Graph, viewport, next/font
+  page.tsx                   # async, revalidate=300, 6 fuentes en Promise.all
+  globals.css                # CSS completo (incluye .tag.alta/.critica)
+  icon.svg
   aviso-de-privacidad/page.tsx
   terminos-y-condiciones/page.tsx
+  api/
+    contacto/route.ts        # formulario → Telegram (validación + honeypot + rate limit)
+    estado/route.ts          # GET barato para el poller del cliente
+    jira/actual/route.ts
+    jira/cola/route.ts
+    rutina/route.ts          # cron de la rutina laboral
+    spotify/route.ts
+    telegram/route.ts        # webhook del bot (comandos + botones)
+    youtube/route.ts
 components/bloque/
-  Identidad.tsx        # avatar + estado (aria-live)
-  InfoCards.tsx        # Jira, cola, GitHub (recibe commit por prop)
-  ChipsEstado.tsx      # 5 chips read-only, tabindex=0, blur/flote con :not([data-activo])
-  Multimedia.tsx       # Spotify/YouTube en .hold
-  ContactForm.tsx      # novalidate, 4 estados, honeypot, link legal fuera de label
-  Reloj.tsx            # useSyncExternalStore, snapshot servidor fijo
-  Footer.tsx           # enlaces internos/externos, redes sin href="#"
-  Estado.tsx           # renderiza Senal<T> (listo|vacio|error)
-components/legal/
-  AvisoDelBorrador.tsx # nota común en páginas legales
+  Identidad.tsx              # avatar + estado (aria-live)
+  InfoCards.tsx              # Jira, cola, GitHub; tickets enlazados a Jira
+  ChipsEstado.tsx            # 5 chips read-only, tabindex=0, blur/flote
+  Multimedia.tsx             # Spotify/YouTube en .hold
+  ContactForm.tsx            # novalidate, 4 estados, honeypot, link legal
+  Reloj.tsx                  # useSyncExternalStore, hourCycle h23
+  Footer.tsx                 # enlaces internos/externos, redes sin href="#"
+  Estado.tsx                 # renderiza Senal<T> (listo|vacio|error)
+  Refresco.tsx               # poller de /api/estado cada 30 s
 lib/
-  fuente.ts            # union discriminada listo|vacio|error + helpers
-  datos.ts             # mock data (Jira, cola, multimedia, estados, legales)
-  enlaces.ts           # enlaces internos/externos/sin-destino
-  tiempo.ts            # haceCuando(iso) con Intl.RelativeTimeFormat('es')
-  github.ts            # enumera repos, GraphQL con alias, ordena cliente, degradación sin token
-legacy/
-  index.html           # sitio estático archivado (465 líneas)
-  aplicar_capa_d.py    # script de migración Capa D
-public/
-  avatar.jpg
-capturas/              # 0375.png, 0768.png, 1440.png, legal.png
+  fuente.ts                  # union discriminada listo|vacio|error + helpers
+  datos.ts                   # estados, legales, constantes; sin mocks duplicados
+  enlaces.ts                 # enlaces internos/externos/sin-destino
+  tiempo.ts                  # haceCuando(iso) con Intl.RelativeTimeFormat('es')
+  github.ts                  # repos + GraphQL con alias, orden en cliente
+  jira.ts                    # ticket actual + cola (search/jql)
+  spotify.ts                 # canción actual + fallback a recientes
+  youtube.ts                 # RSS keyless + Data API de respaldo
+  estado.ts                  # Redis + cache etiquetado del estado
+  rutina.ts                  # horario laboral y textos/teclados del bot
+  telegram.ts                # envío del formulario a Telegram
+  validacion.ts              # reglas compartidas cliente/servidor
+scripts/cron-setup.mjs       # alternativa QStash para la rutina
+.github/workflows/rutina.yml # cron real de la rutina (GitHub Actions)
+legacy/                      # sitio estático anterior, archivado
+public/avatar.jpg
+capturas/                    # 0375.png, 0768.png, 1440.png, legal.png
 ```
 
 ## Decisiones técnicas no obvias
-1. **`orderBy` en `refs` no ordena**: probado — `last` devuelve las ramas más antiguas, `first` mezcla fechas sin orden. Solución: traer 50 refs/repo y ordenar en código (`masReciente()`).
-2. **GraphQL exige token aunque repos sean públicos**: sin token → 403. REST aguanta sin token (60/h) pero en Vercel las IPs son compartidas → impredecible. PAT sin scopes obligatorio.
-3. **Alias por índice, no por nombre**: sanitizar `a-b`/`a_b` colapsa en el mismo alias y pierde un repo en silencio.
-4. **`haceCuando` en servidor**: `Intl.RelativeTimeFormat('es')` resuelto en build/ISR, llega como texto fijo → sin riesgo de hidratación.
-5. **Chips read-only**: antes radios, ahora `div` con `[data-activo]`. CSS cambia `input:not(:checked)` → `:not([data-activo])`. Grupo `tabindex=0` para teclado.
-6. **`/main--legal` anula grid de 3 columnas**: sin esto, a ≥1200px el texto legal caía en columna de 280px.
+1. **`orderBy` en `refs` no ordena**: probado — `last` devuelve las ramas más
+   antiguas y `first` mezcla fechas sin orden. Solución: traer 40 refs/repo y
+   ordenar en código (`masReciente()`).
+2. **GraphQL exige token aunque los repos sean públicos**: sin token → 403.
+   REST aguanta sin token (60/h), pero en Vercel las IPs son compartidas →
+   impredecible. PAT clásico sin scopes obligatorio.
+3. **Alias por índice, no por nombre**: sanitizar `a-b`/`a_b` colapsa en el mismo
+   alias y pierde un repo en silencio.
+4. **`Fuente<T>` y no un valor pelado**: cada bloque distingue “hay datos”, “la
+   fuente contestó vacío” y “la fuente falló”. `components/bloque/Estado.tsx`
+   dibuja las tres ramas sin repetir el `if`.
+5. **`haceCuando` en servidor**: `Intl.RelativeTimeFormat('es')` se resuelve en
+   build/ISR y llega como texto fijo → sin riesgo de hidratación. El reloj usa
+   `hourCycle: 'h23'` porque `es-MX` con `hour12:false` devuelve “24:00” a
+   medianoche.
+6. **Chips read-only**: antes radios, ahora `div` con `[data-activo]`. El CSS
+   cambia `input:not(:checked)` → `:not([data-activo])`. El grupo lleva
+   `tabindex=0` para que el teclado aclare los chips con un solo tabulador.
+7. **`revalidateTag(TAG_ESTADO, { expire: 0 })`**: con `"max"` la primera
+   petición tras cambiar el estado se servía stale y el poller veía el estado
+   viejo un ciclo extra. Con `expire: 0` la siguiente petición bloquea hasta
+   revalidar.
+8. **`/main--legal` anula el grid de 3 columnas**: sin esto, a ≥1200px el texto
+   legal caía en una columna de 280px.
+9. **Spotify 204**: `currently-playing` contesta 204 con body vacío cuando no
+   suena nada; `res.ok` da true y `json()` reventaba. Se corta por status antes
+   de parsear y se cae a `recently-played`.
+10. **Jira `GET /rest/api/3/search/jql`**: el endpoint nuevo; el viejo `/search`
+    devuelve 410 Gone en Cloud. Se usa GET con query params (POST también vale).
 
 ## Fuentes de datos
-| Bloque | Estado | Fuente |
-|--------|--------|--------|
-| Estado/Jira/Cola | Mock | `lib/datos.ts` |
-| Multimedia | Mock | `lib/datos.ts` |
-| Formulario | Simulado | `SIMULAR='ok'` en componente |
-| **GitHub** | **Real** | `lib/github.ts` → GraphQL 1 petición, 20 repos × 50 refs, `status_raw` excluido, `revalidate=300` |
-| Spotify | Real | `lib/spotify.ts` + `app/api/spotify` |
-| YouTube | Real (RSS keyless: playlist `YOUTUBE_PLAYLIST_ID` o canal; Data API solo respaldo ordenado por fecha) | `lib/youtube.ts` + `app/api/youtube` |
-| Jira real | Real | `lib/jira.ts` + `app/api/jira` |
-| Estado Telegram | Real | `lib/telegram.ts` → webhook → Redis → ISR |
+| Bloque | Estado | Fuente / degradación |
+| --- | --- | --- |
+| Estado | Real | Bot de Telegram → Redis (`estado`) → ISR; sin Redis, `ESTADO_ACTUAL` |
+| Jira actual | Real | `lib/jira.ts` + env; vacío = “No hay ningún ticket en curso.” |
+| Cola Jira | Real | `lib/jira.ts`, `maxResults=5`; deuda: paginar `nextPageToken` |
+| GitHub | Real | `lib/github.ts`: GraphQL 1 petición, 20 repos × 40 refs, `status_raw` excluido |
+| Spotify | Real | `lib/spotify.ts`; sin credenciales → canción de ejemplo |
+| YouTube | Real | RSS keyless (playlist o canal); Data API solo respaldo |
+| Formulario | Real | `/api/contacto` → Telegram; sin token → modo simulado |
+| Legales | Estático | `lib/datos.ts` + rutas propias |
 
-## GitHub (fuente real implementada)
-- `lib/github.ts`: enumera repos del owner → filtra `GITHUB_EXCLUIR` (default `status_raw`) → GraphQL con 20 alias, `refs(first:50)` → aplanar → ordenar por `committedDate` descendente → mapear a `Commit` (mensaje, sha7, repo, rama, ticket si `SDT-\d+`, autor, `haceCuando(fecha)`, url).
-- `ULTIMO_COMMIT` en `datos.ts` → eliminado; ahora `lib/github.ts` exporta `ultimoCommit(): Promise<Fuente<Commit>>`.
+Los ejemplos “mock-first” viven en cada `lib/*` de fuente. Sin credenciales la
+tarjeta muestra ese dato; con credenciales se vuelve real. Un fallo de la API no
+cae al ejemplo: muestra el estado de error.
+
+## GitHub (fuente real)
+- `lib/github.ts`: enumera repos del owner → filtra `GITHUB_EXCLUIR` (default
+  `status_raw`) → GraphQL con alias por índice, `refs(first:40)` → aplana →
+  ordena por `committedDate` descendente → mapea a `Commit` (mensaje, sha7, repo,
+  rama, ticket si `SDT-\d+`, autor, `haceCuando(fecha)`, url).
 - `InfoCards` recibe `commit: Fuente<Commit>` por prop (presentacional puro).
 - Sin `GITHUB_TOKEN`: `modo: 'manual'` + `COMMIT_DE_EJEMPLO`.
-- Token inválido/fallo: `modo: 'auto'`, `senal: fallo('No se pudo consultar GitHub ahora mismo.')` → se ve con `role="alert"`, **no** cae al ejemplo.
+- Token inválido/fallo: `modo: 'auto'`, `senal: fallo(...)` → `role="alert"`, sin
+  caer al ejemplo.
 
-## Verificación
-- 89 checks Playwright en Firefox sobre build de producción (0 fallos):
-  - Estilos calculados blur/flote, hover/unhover, teclado, reduced-motion
-  - 4 estados formulario, honeypot, noindex legal, 16 anchos, 3 quiebres
-  - GitHub: sha contrastado vs API, enlace commit correcto, `status_raw` ausente, tiempo relativo ES, sin token en HTML
-  - 3 degradaciones: sin token → ejemplo; token inválido → error con `role="alert"` sin tumbar página; GitHub caído → error
-- Ronda oct 2026 sobre producción (44/44 checks, script en /tmp, sin commit): Jira real contrastado ticket por ticket vs API directa (SDT-1768 + cola SDT-1683…1687, todos assignee = joel.duran@jalisco.gob.mx), GitHub sha vs API, Spotify/YouTube coherentes con /api/*, чips ↔ /api/estado, formulario con envío real (llega a Telegram; honeypot descartado; rate-limit "Espera un minuto" funciona), legales con noindex, 3 anchos sin overflow, reduced-motion en 0s
+## Estado, bot de Telegram y Redis
+- Clave `estado` en Upstash Redis. La página la lee con cache etiquetado
+  (`tags: ['estado']`, `revalidate: 300`); el webhook la purga al guardar.
+- Bot: @status123121bot. Comandos `/estado`, `/estado <clave>`, `/trabajo`,
+  `/personal`, `/libre`, `/comer`, `/junta`. Alias en español en el webhook.
+- Webhook `/api/telegram` con 2 capas: header secreto de Telegram
+  (`x-telegram-bot-api-secret-token`) + `chat.id` whitelisted.
+- Botones inline de los avisos: `estado:<id>` cambia el estado; `estado:sigo`
+  solo acusa recibo. Ambos pasan por `answerCallbackQuery`.
+- `Refresco.tsx` sondea `/api/estado` cada 30 s solo con la pestaña visible y
+  refresca al volver a ella.
 
-## Configuración de despliegue
-- Hosting: Vercel (requerido para server-side tokens + ISR)
-- Build: `npm run build` → `npm run start`
-- Env: `GITHUB_TOKEN` (PAT clásico sin scopes) + opcional `GITHUB_DUENIO`, `GITHUB_EXCLUIR=status_raw`
-- ISR: `export const revalidate = 300` en `app/page.tsx`
-- Primera pinta en Vercel usa datos del **build**; sin token en build → primera pinta con ejemplo, se corrige a los 5 min.
+## Rutina del horario laboral (L-V)
+| Hora Jalisco | Acción |
+| --- | --- |
+| 9:00 | El panel pasa a `work` y avisa por Telegram |
+| 11:00, 13:00, 15:00 | Sondeo “¿Sigues trabajando?” con botones |
+| 17:00 | Pregunta de salida; sin respuesta el estado no cambia |
+| 19:00, 21:00 | Seguimiento “¿Sigues en <estado actual>?” |
+| 22:00–08:59 y sáb/dom | Nada |
 
-## Commits en `next` (sobre `main` @ `48ceb1b`)
-1. `fa61f1c` Next.js + TypeScript sobre el HTML ya verificado (base + componentes + CSS)
-2. `f39c563` Aviso y terminos pasan a rutas propias, con el texto legal como esta (rutas legales, .main--legal, pie sin href="#")
-3. `c2e6aca` La tarjeta de GitHub ya lee la API de verdad (lib/github.ts, tiempo.ts, tipos, revalidate, .env.example)
+- Hora siempre en `America/Mexico_City` vía `Intl` (offset fijo UTC-6 desde 2022;
+  el servidor de Vercel vive en UTC).
+- `app/api/rutina/route.ts`: capa 1 `Authorization: Bearer RUTINA_SECRETO`;
+  capa 2 guardia de hora/día; luego reclama el slot (`rutina_ultimo`) para no
+  duplicar avisos.
+- Cron activo desde el 21 oct 2026: `.github/workflows/rutina.yml`, cron UTC
+  `0 15,17,19,21,23,1,3 * * *` (= 9,11,13,15,17,19,21 de Jalisco). El workflow
+  usa `curl --fail-with-body --retry 2` para que un 401/5xx marque el run en rojo.
+- `scripts/cron-setup.mjs` (`npm run cron:setup`) queda como alternativa QStash
+  si GitHub Actions dejara de servir.
 
-## Archivos modificados/nuevos desde `main`
-- `package.json`, `tsconfig.json`, `next.config.ts`, `eslint.config.mjs`, `.gitignore` (con `!.env.example`)
-- `app/`: `layout.tsx`, `page.tsx`, `globals.css`, `icon.svg`, `aviso-de-privacidad/page.tsx`, `terminos-y-condiciones/page.tsx`
-- `components/bloque/`: 8 archivos nuevos
-- `components/legal/`: `AvisoDelBorrador.tsx`
-- `lib/`: `fuente.ts`, `datos.ts` (modificado), `enlaces.ts`, `tiempo.ts`, `github.ts`
-- `.env.example`, `README.md` (actualizado), capturas regeneradas
-- `legacy/`: `index.html`, `aplicar_capa_d.py` (movidos)
-
-## Próximos pasos (Capa 3+)
-1. Spotify (polling + cache) → YouTube → Jira real → Estado por Telegram (bot + webhook + Redis/KV).
-2. Refresco en cliente (SSE o polling) sobre la misma caché.
-3. Texto legal: revisar con abogado → quitar `noindex`.
+## Seguridad
+- Cabeceras en `next.config.ts`: CSP, `X-Frame-Options: DENY`, `nosniff`,
+  `Referrer-Policy`, `Permissions-Policy`. La CSP necesita `style-src
+  'unsafe-inline'` (thumb con background inline) y `script-src 'unsafe-inline'`
+  (bootstrap de App Router); `img-src` cubre `i.scdn.co` e `i.ytimg.com`.
+- Tokens solo en el servidor: ninguno con prefijo `NEXT_PUBLIC_`; `.env*` está
+  en `.gitignore` y `.env.example` documenta las variables sin valores.
+- Formulario: validación compartida cliente/servidor, honeypot, rate limit por
+  IP (solo cuentan los envíos que pasan validación), escape HTML para Telegram.
+- Webhook: si faltan `TELEGRAM_WEBHOOK_SECRET` o `TELEGRAM_CHAT_ID`, las capas se
+  desactivan; en producción se avisa por `console.warn`.
 
 ## Despliegue (Vercel)
-- Proyecto: `status-raw` (org `joeroot-x`), vinculado con `.vercel/project.json` (ignorado).
-- URL: `https://status-raw.vercel.app` — **desplegado con `vercel --prod`**, prerenderizó con datos reales de GitHub (`bf21308`, `siiges-services · SDT-1768`).
-- Env vars en producción: `GITHUB_TOKEN` (Secret, inyectado desde `gh auth token` por tubería), `GITHUB_DUENIO=JoeRootX`, `GITHUB_EXCLUIR=status_raw`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID=1439778559`, `TELEGRAM_WEBHOOK_SECRET` (irrecuperable por diseño: si hace falta regenerarlo, env nueva → `vercel --prod` → `setWebhook` con el mismo valor).
+- Proyecto `status-raw` (org `joeroot-x`), vinculado con `.vercel/project.json`
+  (ignorado). URL: https://status-raw.vercel.app.
+- `vercel git connect` no se pudo: falta conectar GitHub como método de login en
+  Vercel (dashboard → Settings → Login Connections). Mientras, desplegar manual:
+  `vercel --prod`.
+- Env vars en producción (nombres, nunca valores): `GITHUB_TOKEN`,
+  `GITHUB_DUENIO`, `GITHUB_EXCLUIR`, `SPOTIFY_CLIENT_ID`,
+  `SPOTIFY_CLIENT_SECRET`, `SPOTIFY_REFRESH_TOKEN`, `YOUTUBE_API_KEY`,
+  `YOUTUBE_CHANNEL_ID`, `YOUTUBE_PLAYLIST_ID`, `JIRA_BASE_URL`, `JIRA_EMAIL`,
+  `JIRA_API_TOKEN`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`,
+  `TELEGRAM_WEBHOOK_SECRET`, `RUTINA_SECRETO`, `KV_REST_API_URL`,
+  `KV_REST_API_TOKEN`.
+- Las env Secret no se pueden leer de vuelta (`vercel env pull` trae
+  `[SENSITIVE]`). Al cambiarlas, redeploy obligatorio.
+- `/` es prerenderizada: la primera pinta la genera el build. Sin token en build,
+  esa pinta sale con el ejemplo y se corrige en la siguiente revalidación.
 
-- **Jira REAL en producción (oct 2026)**: `JIRA_BASE_URL=https://sicyt-projects.atlassian.net`, `JIRA_EMAIL` (correo del PAT) y `JIRA_API_TOKEN` como Secrets en Vercel; valores locales en .env.local (gitignored). Endpoint nuevo `POST /rest/api/3/search/jql` (el viejo `/search` devuelve 410). JQL por defecto `assignee = currentUser() AND statusCategory = ...` sobreescribible con `JIRA_JQL_ACTUAL`/`JIRA_JQL_COLA`. Deuda conocida: también hay más tareas "To Do" (isLast=false) — la cola muestra solo la primera página.
-- **Upstash Redis** (store `upstash-kv-citron-ball`) conectado al proyecto → `KV_REST_API_URL/TOKEN` (Production+Preview). Clave `estado` guarda el EstadoId actual.
-- **Estado por Telegram funcionando end to end**: @status123121bot → webhook `/api/telegram` (2 capas: header secreto + chat whitelisted) → Redis → ISR 5 min. `/estado`, `/estado <clave>`, `/trabajo /personal /libre /comer /junta`. Dale `/libre` al bot y la página gira a "Libre" en ≤5 min.
-- Deployment Protection **bajada** (producción pública; `ssoProtection: preview") — camdo con `PATCH /v13/projects` (`ssoProtection`} no `/v9`.
-- `vercel git connect` **no se pudo**: falta conectar GitHub como método de login en Vercel (dashboard → Settings → Login Connections). Mientras, desplegar manual: `vercel --prod`.
-- Jira usa endpoint nuevo `POST /rest/api/3/search/jql` (el viejo `/search` devuelve 410).
+## Verificación
+- 89 checks Playwright en Firefox sobre build de producción (0 fallos): estilos
+  calculados, teclado, reduced-motion, 4 estados del formulario, honeypot,
+  16 anchos, GitHub sha vs API, 3 degradaciones.
+- Ronda oct 2026 sobre producción (44/44): Jira contrastado ticket por ticket,
+  GitHub sha vs API, Spotify/YouTube coherentes con `/api/*`, chips ↔
+  `/api/estado`, formulario real, legales, anchos y reduced-motion.
+- Revisión 26 oct 2026: `tsc --noEmit`, `eslint .`, `npm test` (10 checks) y
+  `npm audit` limpios (0 vulnerabilidades); build de Next 16.4.3 verificado; `/`, `/api/estado`,
+  `/api/jira/actual`, `/api/jira/cola`, `/api/spotify` y `/api/youtube`
+  respondiendo en producción.
 
-## Telegram: gotchas probados
-- El webhook exige `Content-Type: application/json` y solo responde a updates reales de Telegram (header secreto).
-- Env vars Secret NO se pueden leer de vuelta (`vercel env pull` trae `[SENSITIVE]`; `GET /v9/.../env/{id}` tampoco). Guardar el valor o regenerarlo alineando los tres pasos.
-- `setWebhook` rechaza secretos con caracteres fuera de `[A-Za-z0-9_-]` ("Illegal characters") — el generador de Vercel (`openssl rand -hex`) produce hex, pero cualquier `=` o `+`/`/` del base64 falla.
-- El redeploy tras cambiar el Secret es **obligatorio**: las env se hornean en el deployment; si cambias la env después, Telegram reintenta (backoff creciente) y los updates quedan en cola hasta que el deployment lleva el mismo secreto.
-- ISR cookie: la primera pinta tras un build puede estar desfasada respecto a Redis hasta 5 min (ISR normal).
+## Deuda técnica y pendientes
+- Conectar GitHub ↔ Vercel para que un push a `main` despliegue solo.
+- Enlaces de Instagram, LinkedIn y X en el pie (GitHub ya apunta al perfil).
+- Número de WhatsApp en `lib/datos.ts` (vacío = sin botón).
+- Paginación de la cola de Jira (`maxResults=5` hoy).
+- Revisión del texto legal con abogado si el proyecto lo exige.
+- `theme-color` fijo; podría seguir al estado.
+- Ampliar la cobertura de tests (hoy `rutina`, `tiempo` y `validacion`; faltan
+  fuentes con red y componentes).
 
-## Estado actual del repo
-- Rama activa: `main` (sincronizada con `origin`); `next` quedó fusionada en `85ba623`.
-- `.next/`, `node_modules/`, `.vercel/`, `.env*` ignorados
-- Token **nunca** en disco ni en commits; se inyecta vía `gh auth token` al proceso para pruebas y ya está como Secret en Vercel.
-- Formulario: `/api/contacto` con entrega a Telegram (mock-first; sin `TELEGRAM_BOT_TOKEN` funciona simulado).
-## Spotify: BUG 204 encontrado y corregido
-- `currently-playing` contesta 204 con body vacio cuando no suena nada; `res.ok` da true y `json()` reventaba ("Unexpected end of JSON input"), matando el fallback a recientes. Fix: resolver por status===204 antes de parsear (commit 02fb094).
-- Spotify REAL en produccion desde oct 2026: SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET / SPOTIFY_REFRESH_TOKEN como Secrets en Vercel; valores locales en .env.local (gitignored).
-
-## YouTube REAL en produccion (oct 2026) — playlist "Sugeridos" + RSS keyless
-- YOUTUBE_PLAYLIST_ID=PLSbjvCxtMwj0 ("Sugeridos", secreto en Vercel) + YOUTUBE_CHANNEL_ID. YOUTUBE_API_KEY queda como respaldo.
-- Cadena: RSS de playlist → Data API playlistItems por FECHA DE ALTA (snippet.publishedAt = cuando se agregó; "Sugeridos" NO tiene feed RSS: 404) → RSS del canal → Data API subidas (UC→UU) ordenadas por publicación. El último agregado a la playlist es el que pinta la tarjeta.
-- Etiqueta de la tarjeta: "Último video visto…". Acceso a lo que VES en YouTube (watch history) no existe en API pública.
-
-## Rutina oct 2026 (solo Lun-Vie): horario laboral + avisos del bot
-
-- **9:00 (L-V)**: arranca la jornada — el panel gira a `work` (mismo mecanismo del bot: `redisSet('estado')` + `revalidateTag(TAG_ESTADO, { expire: 0 })`) y avisa por Telegram.
-- **11:00, 13:00, 15:00 (L-V)**: sondeo "¿Sigues trabajando?" con botones inline (Trabajo/Personal/Libre/Ausente/Junta/"Sigo así").
-- **17:00 (L-V)**: pregunta de salida. Sin respuesta el estado NO cambia (decisión del usuario).
-- **19:00, 21:00 (L-V)**: seguimiento "¿Sigues en <estado actual>?".
-- **22:00–08:59 y sáb/dom**: nada. El silencio pedido (23:00–05:00) queda cubierto de sobra.
-- Botón "Sigo así" solo acusa recibo (toast) sin tocar el estado; los demás cambian el estado por el mismo camino que los comandos (ahora unificado en `cambiarEstado()` del webhook, que además atiende `callback_query`).
-- `lib/rutina.ts`: hora SIEMPRE en `America/Mexico_City` vía `Intl` (offset fijo UTC-6 desde 2022; el servidor de Vercel vive en UTC — `getHours()` daría otra hora). `accionRutina(hora, diaSemana)` decide; noche/fin de semana → null. `idDeSlot` = fecha+hora para la antiduplicación.
-- `app/api/rutina/route.ts` (nuevo): golpeado por cron externo. Capa 1 `Authorization: Bearer RUTINA_SECRETO`; capa 2 el guardia de hora/día; luego reclama el slot (`redisSet('rutina_ultimo', slot)`) para que los reintentos no dupliquen el aviso. 200 siempre salvo el 401.
-- Env nueva: `RUTINA_SECRETO` (local + Secret en Vercel; doc en .env.example).
-- Cron (schedule de QStash en la cuenta Upstash que ya existe por Redis): apunta a `https://status-raw.vercel.app/api/rutina` con ese header; cron UTC `0 15,17,19,21,23,1,3 * * *` = 9,11,13,15,17,19,21 de Jalisco. Crear en QStash console → Schedules (o API con QSTASH_TOKEN).
-- **ACTIVADO el 21 oct 2026 con GitHub Actions** (QStash nunca se creó): `.github/workflows/rutina.yml` con el mismo cron UTC + `secrets.RUTINA_SECRETO` del repo (cargado con `gh secret set` desde .env.local). Probado end-to-end con `gh workflow run`: el run disparó el sondeo real de las 11:00, `{"ok":true,"motivo":"sondeo","mandado":true}` y Redis quedó `rutina_ultimo = 2026-10-21T11`. Gotchas: (1) para commitear workflows hace falta el scope `workflow` en el token de gh — se da con `gh auth refresh -s workflow` (flujo de dispositivo, sensible a red inestable: puede requerir 2-3 intentos); (2) el cron de Actions puede atrasarse minutos, sin consecuencia porque el slot se reclama por hora; (3) `scripts/cron-setup.mjs` queda como alternativa QStash.
-  **Pasos exactos** (QStash Console → Schedules → Create Schedule):
-  1. Destination URL: `https://status-raw.vercel.app/api/rutina` (método POST).
-  2. Cron: `0 15,17,19,21,23,1,3 * * *` (la consola lo interpreta en UTC; el endpoint valida la hora local de verdad).
-  3. Headers: `Authorization: Bearer <valor de RUTINA_SECRETO>` (está en .env.local local; el mismo valor ya es Secret en Vercel desde el 15 oct 2026). Sin ese header el endpoint contesta 401.
-  4. Probar con "Send test": fuera de los slots contesta `{"ok":true,"motivo":"fuera de horario"}` 200 — correcto; dentro de slot manda el aviso y reclama el slot en Redis.
-- Tests: tabla de slots (todas las horas × Dom/Lun/Jue/Sáb), guardia 401/200 local y `horaLocal` contrastado con el reloj real.
-
-## WhatsApp (oct 2026, esperando número)
-- `WHATSAPP` en lib/datos.ts (vacío hoy) → si se llena ('52……'), Footer pinta botón `wa.me` click-to-chat; sin número no se pinta nada. El chat ocurre en el teléfono: el servidor no trata datos.
-
-## Ronda de revision oct 2026 (post-despliegue): bugs + fluides + seguridad
-- **COMMITADA y DESPLEGADA** el 15 oct 2026 (commit `2fc75af` → push a origin/main → `vercel --prod`, deployment `status-7w23l9329`). Verificado en producción: CSP + X-Frame-Options DENY + nosniff + Referrer-Policy + Permissions-Policy presentes, `/api/estado`, `/api/spotify` y `/api/youtube` contestando datos reales.
-- **revalidateTag(TAG_ESTADO, { expire: 0 })** en el webhook (antes "max"): con "max" la primera peticion tras cambiar el estado se servia STALE (stale-while-revalidate) y el poller veia el estado viejo un ciclo extra (~30-60 s). Con expire:0 la siguiente peticion bloquea hasta revalidar: el cambio se ve al instante. Esta era la causa del "se actualiza mal".
-- **.tag.alta / .tag.critica** en globals.css: Jira real trae High/Critical y las tags salian sin color (solo existian .media y .baja).
-- page.tsx: las 6 fuentes (estado incluido) en un solo Promise.all, antes el estado se esperaba aparte y habia cascada.
-- lib/spotify.ts: cache del access token a nivel de modulo (expires_in - 60 s de margen); antes un ida a accounts.spotify.com por render.
-- Refresco.tsx: sondeo inmediato en visibilitychange y solo con pestaña visible (menos peticiones muertas en segundo plano).
-- Webhook Telegram: escapar() en argumento/comando interpolados en parse_mode HTML (un < colgaba el sendMessage); console.warn en production si faltan TELEGRAM_WEBHOOK_SECRET o TELEGRAM_CHAT_ID (las capas se desactivaban en silencio).
-- next.config.ts: cabeceras de seguridad (CSP conservadora, X-Frame-Options DENY, nosniff, Referrer-Policy, Permissions-Policy). La CSP necesita style-src 'unsafe-inline' (Thumb con background inline) y script-src 'unsafe-inline' (bootstrap App Router); img-src: i.scdn.co + i.ytimg.com (los thumbs via CSS background caen en img-src).
-- Limpieza: rutas duplicadas /api/spotify/now y /api/youtube/now eliminadas (eran byte a byte iguales a /api/spotify y /api/youtube); mocks muertos de lib/datos.ts (TICKET_ACTUAL, COLA_TICKETS, SPOTIFY, YOUTUBE + tipos) eliminados — los ejemplos reales viven en cada lib; index.html.bak movido a legacy/.
-- Verificado: tsc + eslint + next build limpios; smoke test local con credenciales reales (Spotify y Jira contestaron datos reales; cabeceras presentes; /api/estado ok).
-
-## Legal oct 2026 (COMPLETO)
-- CORREO=joeroot.dev@gmail.com (aviso, términos, mailto), FECHA_ACTUALIZACION='13 de octubre de 2026', Terceros (Telegram + WhatsApp), Conservación, ARCO y propiedad/enlaces redactados.
-- NOMBRE='El titular del sitio joerootX' + DOMICILIO='Jalisco, México' (genérico a pedido del usuario: no expone su nombre/domicilio personal).
-- noindex QUITADO en ambas rutas y AvisoDelBorrador eliminado (components/legal ya no existe). Si algún día piden los datos reales del responsable, se editan NOMBRE/DOMICILIO en lib/datos.ts.
+## Historial de revisiones
+- **15 oct 2026** — Ronda post-despliegue: `revalidateTag(expire:0)`, tags de
+  prioridad Jira, 6 fuentes en paralelo, cache del token de Spotify, poller con
+  `visibilitychange`, escape del webhook, cabeceras de seguridad, limpieza de
+  rutas/mocks duplicados.
+- **21 oct 2026** — Rutina laboral activada con GitHub Actions (9:00, 11:00,
+  13:00, 15:00, 17:00, 19:00 y 21:00 de Jalisco); QStash nunca se creó y queda
+  como alternativa.
+- **26 oct 2026** — Revisión completa: Next 16.3.8 → 16.4.3 por aviso crítico;
+  `npm audit fix` (zod); reloj a `hourCycle: h23`; `InfoCards` con estado real,
+  tickets enlazados a Jira y cola sin HTML inválido; `engines` de Node; workflow
+  con `curl --fail-with-body`; Open Graph/Twitter; enlace de GitHub en el pie;
+  documentación y comentarios al día.

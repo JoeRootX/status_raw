@@ -95,10 +95,10 @@ function aVideo(entrada: Entrada): Video {
 }
 
 /**
- * El feed https://www.youtube.com/feeds/videos.xml?playlist_id=… comparte
- * videos que marque como "lo que comparto/viengo" si PLAYLIST_ID apunta a una
- * playlist pública adminstrada por mí; sin ella cae al feed del canal (sus
- * subidas, ya en orden real).
+ * El feed https://www.youtube.com/feeds/videos.xml?playlist_id=… sirve los
+ * videos de una playlist pública que yo administre (por ejemplo, "lo que
+ * comparto") si PLAYLIST_ID apunta a ella; sin playlist cae al feed del canal
+ * (sus subidas, ya en orden real).
  */
 async function porRSS(feedUrl: string): Promise<Video | null> {
   const respuesta = await fetch(feedUrl, {

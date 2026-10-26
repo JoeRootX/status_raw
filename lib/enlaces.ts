@@ -20,7 +20,7 @@ export const LEGALES: readonly Enlace[] = [
 ];
 
 export const REDES: readonly Enlace[] = [
-  { texto: 'GitHub', href: null },
+  { texto: 'GitHub', href: 'https://github.com/JoeRootX' },
   { texto: 'Instagram', href: null },
   { texto: 'LinkedIn', href: null },
   { texto: 'X', href: null },

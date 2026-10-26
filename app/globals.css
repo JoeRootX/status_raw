@@ -127,7 +127,9 @@ main {
 .ticket-id { font-size: 18px; font-weight: 500; margin: 6px 0 4px }
 .queue li { list-style: none; display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; font-size: 12px; padding: 7px 0 }
 .card-note { color: var(--muted); font-size: 12px; margin-top: 8px }
-.queue li span:first-child { font-family: var(--mono); color: var(--muted) }
+.queue-key, .queue li span:first-child { font-family: var(--mono); color: var(--muted) }
+.ticket-id a, .queue-key { color: inherit; text-decoration: none }
+.ticket-id a:hover, .queue-key:hover { text-decoration: underline }
 .tag { font-size: 11px; padding: 2px 9px; border-radius: var(--r-pill) }
 .tag.media { background: var(--warn-bg); color: var(--warn-fg) }
 .tag.baja { background: var(--ok-bg); color: var(--ok-fg) }

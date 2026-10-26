@@ -74,9 +74,10 @@ function prioridadDe(nombre?: string | null): TicketEnCola['prioridad'] {
 }
 
 /**
- * `POST /rest/api/3/search/jql`: el endpoint nuevo; el viejo `/search` ya
- * devuelve 410 Gone en Cloud. Pide `fields` explícitos y pagina por
- * `nextPageToken` (aquí no hace falta: nunca pedimos más de 5).
+ * `GET /rest/api/3/search/jql`: el endpoint nuevo; el viejo `/search` ya
+ * devuelve 410 Gone en Cloud. Se usa GET con query params (POST también vale),
+ * con `fields` explícitos y paginación por `nextPageToken` (aquí no hace falta:
+ * nunca pedimos más de 5).
  */
 async function buscar(jql: string, maxResults: number): Promise<Issue[]> {
   const creds = credenciales();

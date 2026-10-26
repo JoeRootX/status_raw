@@ -13,7 +13,9 @@ let temporizador: ReturnType<typeof setInterval> | null = null;
 function leer(): Reloj {
   const d = new Date();
   return {
-    hora: d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false }),
+    // hourCycle h23 y no hour12:false: con hour12:false, es-MX puede devolver
+    // "24:00" a medianoche en vez de "00:00".
+    hora: d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }),
     fecha: d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }),
   };
 }

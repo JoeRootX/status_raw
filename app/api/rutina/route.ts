@@ -1,15 +1,19 @@
 /**
- * Rutina del horario laboral: la golpea un cron externo (schedule de QStash)
- * en las horas exactas del horario de Jalisco y aquí se decide qué toca.
+ * Rutina del horario laboral: la golpea el cron de GitHub Actions
+ * (`.github/workflows/rutina.yml`) en las horas exactas del horario de Jalisco
+ * y aquí se decide qué toca. `scripts/cron-setup.mjs` queda como alternativa
+ * QStash si Actions dejara de servir.
  *
  * Capa 1: `Authorization: Bearer RUTINA_SECRETO` — sin la env correcta no
- * entra; el secreto vive solo en Vercel y en el schedule del cron.
+ * entra; el secreto vive solo en Vercel y en el secreto del repo de GitHub.
  * Capa 2: el guardia de `lib/rutina.ts` — aunque colara un POST forjado, solo
  * puede actuar dentro de un slot weekdays de 9 a 21 (nada en la noche, nada
  * en fin de semana).
  *
- * Siempre responde 200 cuando el motivo no es de seguridad: QStash reintenta
- * los 5xx y nos interesa que un slot ya atendido no se dispare de nuevo.
+ * Siempre responde 200 cuando el motivo no es de seguridad: el cron no
+ * reintenta los 5xx y nos interesa que un slot ya atendido no se dispare de
+ * nuevo. El workflow usa `curl --fail-with-body` para que un 401/5xx sí se
+ * vea como run fallido.
  */
 
 import { revalidateTag } from 'next/cache';
@@ -76,7 +80,7 @@ export async function POST(request: Request) {
     return Response.json({ ok: true, motivo: 'slot ya atendido', slot });
   }
 
-  // Se reclama el slot antes de actuar: dos disparos de QStash cerca no
+  // Se reclama el slot antes de actuar: dos disparos del cron cerca no
   // preguntan dos veces. Si Telegram falla, se acepta la pérdida (el estado
   // sí se apunta; solo se pierde el texto del aviso).
   const reclamado = await redisSet('rutina_ultimo', slot);

@@ -18,17 +18,20 @@ npm run dev        # http://localhost:3000
 | `npm run start` | Sirve el build |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | ESLint (flat config) |
+| `npm test` | Tests de `rutina`, `tiempo` y `validacion` (node:test + tsx) |
 
 ## Stack
 
-Next.js 16 (App Router) · React 19 · TypeScript 6 · CSS propio, sin framework.
+Next.js 16.4.3 (App Router) · React 19 · TypeScript 6 · CSS propio, sin framework.
 
 Las versiones están fijadas a propósito y no se actualizan sin revisar:
 
 - **`typescript@6.0.3`, no la 7.** `typescript-eslint` exige `>=4.8.4 <6.1.0`; la 7 ya
   es la `latest` de npm y el lint se rompe con ella.
 - **`eslint@9`, no la 10.** `eslint-config-next@16` pide `>=9`.
-- **`next@16.3.8`** requiere Node `>=20.9.0`.
+- **`next@16.4.3`** requiere Node `>=20.9.0`. Se subió desde 16.3.8 el 26 oct 2026
+  para corregir un aviso crítico de seguridad de Next.js (RCE en la API de
+  optimización de imágenes); `npm audit` queda en 0 vulnerabilidades.
 
 ## Estructura
 
@@ -162,8 +165,8 @@ arregló) vive en `CONTEXT.md`; el historial queda en los commits.
 
 - **Conectar GitHub ↔ Vercel** en el dashboard (Settings → Login Connections):
   mientras no exista, desplegar con `vercel --prod` a mano.
-- **Enlaces de redes del pie.** `lib/enlaces.ts` los tiene en `href: null` y
-  se pintan como texto plano, no como enlaces muertos.
+- **Enlaces de redes del pie.** GitHub ya apunta al perfil; Instagram, LinkedIn y
+  X siguen en `href: null` y se pintan como texto plano, no como enlaces muertos.
 - **Número de WhatsApp.** `WHATSAPP` en `lib/datos.ts` está vacío: al llenarlo
   aparece el botón de click-to-chat en el pie, solo.
 - **Cola de Jira con paginación.** Hoy pide `maxResults=5`; con más tareas

@@ -23,6 +23,9 @@ jobs:
         env:
           RUTINA_SECRETO: ${{ secrets.RUTINA_SECRETO }}
         run: |
-          curl -sS --max-time 30 -X POST https://status-raw.vercel.app/api/rutina \
+          # --fail-with-body: un 401/5xx marca el run en rojo en vez de pasar
+          # silencioso. --retry cubre un fallo de red puntual.
+          curl -sS --fail-with-body --retry 2 --retry-delay 5 --max-time 30 \
+            -X POST https://status-raw.vercel.app/api/rutina \
             -H "Authorization: Bearer $RUTINA_SECRETO" \
             -w '\nHTTP:%{http_code}\n'
