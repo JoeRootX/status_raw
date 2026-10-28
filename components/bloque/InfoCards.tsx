@@ -2,7 +2,7 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { esListo, type Fuente } from '@/lib/fuente';
 import type { Commit } from '@/lib/github';
-import type { TicketActual, TicketEnCola } from '@/lib/jira';
+import type { ColaTickets, TicketActual, TicketEnCola } from '@/lib/jira';
 import Estado from './Estado';
 
 const PRIORIDAD: Record<NonNullable<TicketEnCola['prioridad']>, string> = {
@@ -29,7 +29,7 @@ export default function InfoCards({
 }: {
   commit: Fuente<Commit>;
   ticketActual: Fuente<TicketActual>;
-  colaTickets: Fuente<TicketEnCola[]>;
+  colaTickets: Fuente<ColaTickets>;
 }) {
   // Se leen aquí para no meter un <p> de Estado dentro de un <h2> (HTML inválido)
   // y para no pintar "En progreso" cuando en realidad no hay ticket.
@@ -57,27 +57,41 @@ export default function InfoCards({
 
       <article className="card card--queue">
         <h2>
-          En cola de tickets {cola ? <span className="badge">{cola.length}</span> : null}
+          En cola de tickets{' '}
+          {cola ? (
+            <span className="badge">
+              {cola.total}
+              {cola.hayMas ? '+' : ''}
+            </span>
+          ) : null}
         </h2>
         <Estado senal={colaTickets.senal}>
-          {(tickets) => (
-            <ul className="queue">
-              {tickets.map((t) => (
-                <li key={t.clave}>
-                  {t.enlace ? (
-                    <Link href={t.enlace} target="_blank" rel="noreferrer" className="queue-key">
-                      {t.clave}
-                    </Link>
-                  ) : (
-                    <span className="queue-key">{t.clave}</span>
-                  )}
-                  <span>{t.resumen}</span>
-                  <span className={`tag ${t.prioridad ?? 'media'}`}>
-                    {PRIORIDAD[t.prioridad ?? 'media']}
-                  </span>
-                </li>
-              ))}
-            </ul>
+          {({ tickets, total, hayMas }) => (
+            <>
+              <ul className="queue">
+                {tickets.map((t) => (
+                  <li key={t.clave}>
+                    {t.enlace ? (
+                      <Link href={t.enlace} target="_blank" rel="noreferrer" className="queue-key">
+                        {t.clave}
+                      </Link>
+                    ) : (
+                      <span className="queue-key">{t.clave}</span>
+                    )}
+                    <span>{t.resumen}</span>
+                    <span className={`tag ${t.prioridad ?? 'media'}`}>
+                      {PRIORIDAD[t.prioridad ?? 'media']}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              {total > tickets.length ? (
+                <p className="card-note">
+                  Mostrando {tickets.length} de {total}
+                  {hayMas ? '+' : ''}
+                </p>
+              ) : null}
+            </>
           )}
         </Estado>
       </article>
