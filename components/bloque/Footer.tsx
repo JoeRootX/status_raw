@@ -23,7 +23,7 @@ export default function Footer() {
       <div>
         <span className="who">joerootX</span> &nbsp;|&nbsp; Desarrollador · Creador de contenido
       </div>
-      <nav aria-label="Legal y contacto">
+      <nav aria-label="Enlaces y contacto">
         {LEGALES.map((enlace) => (
           <Item key={enlace.texto} {...enlace} />
         ))}

@@ -15,6 +15,7 @@ export type Enlace = {
 export const esExterno = (href: string): boolean => /^https?:\/\//.test(href);
 
 export const LEGALES: readonly Enlace[] = [
+  { texto: 'CV', href: '/cv' },
   { texto: 'Aviso de privacidad', href: '/aviso-de-privacidad' },
   { texto: 'Términos y condiciones', href: '/terminos-y-condiciones' },
 ];
