@@ -12,8 +12,9 @@
  */
 
 import { revalidateTag } from 'next/cache';
-import { ESTADOS, ORDEN_ESTADOS, esEstadoId, type EstadoId } from '@/lib/datos';
+import { ESTADOS, ORDEN_ESTADOS, type EstadoId } from '@/lib/datos';
 import { ESTADO_REDIS_KEY, TAG_ESTADO, estadoVivo, redisSet } from '@/lib/estado';
+import { accionCallback } from '@/lib/rutina';
 
 export const revalidate = 0;
 
@@ -127,21 +128,35 @@ async function responderBoton(callbackId: string, text?: string): Promise<void> 
   }
 }
 
-/** Cambia el estado en Redis y purga el cache; lo usan los comandos y los botones. */
-async function cambiarEstado(destino: EstadoId, chatId: number): Promise<boolean> {
+/** Cambia el estado en Redis y purga el cache; lo usan los comandos y los botones.
+    Con `avisar: false` (botones) no manda un mensaje extra: el toast de
+    answerCallbackQuery basta y así el botón responde enseguida. */
+async function cambiarEstado(
+  destino: EstadoId,
+  chatId: number,
+  avisar = true,
+): Promise<boolean> {
   const guardado = await redisSet(ESTADO_REDIS_KEY, destino);
   if (guardado) {
     // expire: 0 = la siguiente peticion BLOQUEA hasta revalidar: el cambio
     // se ve de inmediato. Con "max" la primera peticion se sirve stale
     // (stale-while-revalidate) y el poller vea el estado viejo un ciclo mas.
-    revalidateTag(TAG_ESTADO, { expire: 0 });
+    // Si la purga falla, el estado YA quedó guardado: no se tumba el cambio
+    // por el cache (la página lo recoge en el siguiente ciclo de 5 min).
+    try {
+      revalidateTag(TAG_ESTADO, { expire: 0 });
+    } catch (error) {
+      console.error('[telegram-webhook] no se pudo purgar el cache:', error);
+    }
   }
-  await contestar(
-    chatId,
-    guardado
-      ? `Estado actualizado: <b>${etiquetaDe(destino)}</b> ✅`
-      : 'No se alcanzó el almacenamiento. Intenta de nuevo.',
-  );
+  if (avisar) {
+    await contestar(
+      chatId,
+      guardado
+        ? `Estado actualizado: <b>${etiquetaDe(destino)}</b> ✅`
+        : 'No se alcanzó el almacenamiento. Intenta de nuevo.',
+    );
+  }
   return guardado;
 }
 
@@ -174,23 +189,19 @@ export async function POST(request: Request) {
   // "estado:<id>" es lo mismo que mandar el comando a mano.
   if (callback) {
     try {
-      const [prefijo = '', valor = ''] = (callback.data ?? '').split(':');
-      if (prefijo !== 'estado' || !valor) {
+      const accion = accionCallback(callback.data);
+      if (!accion) {
         await responderBoton(callback.id);
         return Response.json({ ok: true, motivo: 'callback desconocido' });
       }
-      if (valor === 'sigo') {
+      if (accion.tipo === 'sigo') {
         await responderBoton(callback.id, 'Anotado ✅');
         return Response.json({ ok: true, motivo: 'sigo igual' });
       }
-      if (!esEstadoId(valor)) {
-        await responderBoton(callback.id);
-        return Response.json({ ok: true, motivo: 'estado desconocido' });
-      }
-      const guardado = await cambiarEstado(valor, chatId);
+      const guardado = await cambiarEstado(accion.id, chatId, false);
       await responderBoton(
         callback.id,
-        guardado ? `Estado actualizado: ${etiquetaDe(valor)} ✅` : 'No se pudo guardar',
+        guardado ? `Estado actualizado: ${etiquetaDe(accion.id)} ✅` : 'No se pudo guardar',
       );
       return Response.json({ ok: guardado, motivo: 'estado cambiado' });
     } catch (error) {

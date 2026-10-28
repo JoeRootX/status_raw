@@ -80,18 +80,36 @@ export async function POST(request: Request) {
     return Response.json({ ok: true, motivo: 'slot ya atendido', slot });
   }
 
-  // Se reclama el slot antes de actuar: dos disparos del cron cerca no
-  // preguntan dos veces. Si Telegram falla, se acepta la pérdida (el estado
-  // sí se apunta; solo se pierde el texto del aviso).
-  const reclamado = await redisSet('rutina_ultimo', slot);
+  // Se reclama el slot con un SET NX atómico por slot: dos disparos del cron
+  // a la misma hora no pueden mandar dos avisos ni siquiera si llegan a la
+  // vez (el check-then-set de `rutina_ultimo` tenía esa carrera). La marca
+  // caduca sola; si Telegram falla, se acepta la pérdida (el estado sí se
+  // apunta; solo se pierde el texto del aviso).
+  const marcaSlot = `rutina_slot_${slot}`;
+  const reclamado = await redisSet(marcaSlot, '1', { nx: true, ex: 60 * 60 * 48 });
   if (!reclamado) {
-    return Response.json({ ok: false, motivo: 'almacenamiento caído', slot });
+    const yaEstaba = (await redisGet(marcaSlot)) === '1';
+    return Response.json({
+      ok: yaEstaba,
+      motivo: yaEstaba ? 'slot ya atendido' : 'almacenamiento caído',
+      slot,
+    });
   }
+
+  // Se conserva la clave vieja como bitácora del último slot atendido.
+  await redisSet('rutina_ultimo', slot);
 
   switch (accion.tipo) {
     case 'jornada': {
       const guardado = await redisSet(ESTADO_REDIS_KEY, 'work');
-      if (guardado) revalidateTag(TAG_ESTADO, { expire: 0 });
+      if (guardado) {
+        try {
+          revalidateTag(TAG_ESTADO, { expire: 0 });
+        } catch (error) {
+          // El estado ya quedó guardado; el cache se refresca en 5 min.
+          console.error('[rutina] no se pudo purgar el cache:', error);
+        }
+      }
       const mandado = await enviar(
         guardado
           ? textoDe(accion)
