@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter, JetBrains_Mono } from 'next/font/google';
+import { COLOR_ESTADO } from '@/lib/datos';
+import { estadoActual } from '@/lib/estado';
 import './globals.css';
 
 const inter = Inter({
@@ -37,9 +39,15 @@ export const metadata: Metadata = {
   },
 };
 
-export const viewport: Viewport = {
-  themeColor: '#070d1c',
-};
+/**
+ * theme-color dinamico: la barra del navegador toma el color del estado actual.
+ * Se lee con la misma cache etiquetada que la pagina, asi que el
+ * `revalidateTag('estado')` del webhook tambien refresca este metadato.
+ */
+export async function generateViewport(): Promise<Viewport> {
+  const estado = await estadoActual();
+  return { themeColor: COLOR_ESTADO[estado] };
+}
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
