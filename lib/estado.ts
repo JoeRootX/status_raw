@@ -39,17 +39,33 @@ export async function redisGet(clave: string, cache: OpcionesCache = {}): Promis
   return datos.result ?? null;
 }
 
-/** SET de la clave. Devuelve si el Redis la aceptó. Usado por el webhook. */
-export async function redisSet(clave: string, valor: string): Promise<boolean> {
+type OpcionesSet = { nx?: boolean; ex?: number };
+
+/** SET de la clave. `nx` no pisa una clave existente y `ex` la caduca en
+    segundos (Upstash REST los recibe como segmentos de la ruta). */
+export async function redisSet(
+  clave: string,
+  valor: string,
+  opciones: OpcionesSet = {},
+): Promise<boolean> {
   if (!conectado()) return false;
-  const respuesta = await fetch(
-    new URL(`/set/${encodeURIComponent(clave)}/${encodeURIComponent(valor)}`, REST_URL),
-    {
-      headers: { Authorization: `Bearer ${REST_TOKEN}` },
-      signal: AbortSignal.timeout(8_000),
-    },
-  );
-  return respuesta.ok;
+  const ruta =
+    `/set/${encodeURIComponent(clave)}/${encodeURIComponent(valor)}` +
+    (opciones.nx ? '/NX' : '') +
+    (opciones.ex ? `/EX/${Math.floor(opciones.ex)}` : '');
+  const respuesta = await fetch(new URL(ruta, REST_URL), {
+    headers: { Authorization: `Bearer ${REST_TOKEN}` },
+    signal: AbortSignal.timeout(8_000),
+  });
+  if (!respuesta.ok) return false;
+  // Con NX, Upstash contesta 200 y `result: null` si la clave ya existía.
+  if (!opciones.nx) return true;
+  try {
+    const datos = (await respuesta.json()) as { result?: string | null };
+    return datos.result === 'OK';
+  } catch {
+    return false;
+  }
 }
 
 function normalizar(valor: string | null): EstadoId {
