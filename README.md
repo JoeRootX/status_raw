@@ -153,6 +153,24 @@ De referencia queda `scripts/cron-setup.mjs` (`npm run cron:setup`), el
 equivalente con QStash si algún día Actions dejara de servir (necesita
 `QSTASH_TOKEN` en la variable de entorno).
 
+## Monitoreo de fuentes y digest por correo
+
+`GET|POST /api/monitor` revisa en paralelo las mismas fuentes que pinta la
+página (GitHub, Jira actual, cola de Jira, Spotify y YouTube), arma un digest y
+lo manda por correo. La clasificación vive en `lib/monitor.ts` y el envío en
+`lib/correo.ts` (Resend por HTTP, sin dependencias nuevas).
+
+El cron lo declara `vercel.json`: todos los días a las `0 14 * * *` UTC (8:00 de
+Jalisco) Vercel golpea el endpoint con `Authorization: Bearer CRON_SECRET`.
+`CRON_SECRET` es la env que Vercel usa para firmar sus crons; alternativamente
+se acepta `MONITOR_SECRETO` para dispararlo a mano o desde QStash. Sin ninguna
+de las dos el endpoint responde 401, como `/api/rutina`.
+
+El correo necesita `RESEND_API_KEY`, `MONITOR_EMAIL_FROM` y `MONITOR_EMAIL_TO`.
+Sin ellas el envío sale en modo simulado (`correo.simulado: true` en la
+respuesta) y la revisión de fuentes se hace igual. Un fallo real de una fuente
+se reporta como `estado: 'error'` en la respuesta y en el asunto del digest.
+
 ## Verificación
 
 El proyecto tiene una cultura de verificación end-to-end: los rounds se corrigen
