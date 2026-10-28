@@ -1,0 +1,20 @@
+---
+title: 'El estado en una pestaña'
+date: 2026-10-19
+tags: [proyecto, diseño]
+---
+
+Este sitio nació para responder una pregunta que me hacían seguido: *¿estás
+disponible?* En vez de contestar uno por uno, el panel lo muestra solo.
+
+## Qué hay arriba
+
+El estado lo cambia un bot de Telegram, nunca el visitante. Los chips son de
+solo lectura a propósito.
+
+1. Estado actual.
+2. Ticket de Jira en curso y cola.
+3. Último commit, Spotify y YouTube.
+
+Todo con `revalidate = 300`: cinco minutos alcanzan para que el panel se sienta
+vivo sin castigar las APIs.
