@@ -1,7 +1,7 @@
 import { ultimoCommit } from '@/lib/github';
 import { cancionActual } from '@/lib/spotify';
 import { videoActual } from '@/lib/youtube';
-import { colaTickets, ticketActual } from '@/lib/jira';
+import { colaTickets, colaTicketsAlt, ticketActual } from '@/lib/jira';
 import { estadoActual } from '@/lib/estado';
 import ChipsEstado from '@/components/bloque/ChipsEstado';
 import ContactForm from '@/components/bloque/ContactForm';
@@ -19,15 +19,16 @@ import Refresco from '@/components/bloque/Refresco';
 export const revalidate = 300;
 
 export default async function Inicio() {
-  // Las seis fuentes en paralelo: el estado no depende de las demas, asi que
+  // Las fuentes en paralelo: el estado no depende de las demas, asi que
   // esperar primero la suya y luego el resto alargaba la primera pinta sin motivo.
-  const [estado, commit, spotify, youtube, ticket, cola] = await Promise.all([
+  const [estado, commit, spotify, youtube, ticket, cola, colaAlt] = await Promise.all([
     estadoActual(),
     ultimoCommit(),
     cancionActual(),
     videoActual(),
     ticketActual(),
     colaTickets(),
+    colaTicketsAlt(),
   ]);
 
   return (
@@ -46,7 +47,7 @@ export default async function Inicio() {
         {/* CENTRO: identidad, estado y trabajo en curso */}
         <section className="center">
           <Identidad estado={estado} />
-          <InfoCards commit={commit} ticketActual={ticket} colaTickets={cola} />
+          <InfoCards commit={commit} ticketActual={ticket} colaTickets={cola} colaAlt={colaAlt} />
           <ChipsEstado actual={estado} />
         </section>
 
