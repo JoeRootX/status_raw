@@ -45,7 +45,13 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es" className={`${inter.variable} ${mono.variable}`}>
-      <body>{children}</body>
+      <body>
+        {/* Primer elemento enfocable: con Tab se revela y salta al contenido. */}
+        <a className="skip-link" href="#contenido">
+          Saltar al contenido
+        </a>
+        {children}
+      </body>
     </html>
   );
 }

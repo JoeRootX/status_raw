@@ -40,7 +40,7 @@ export default async function Inicio() {
       {/* data-state va aqui y no en <body>: en React no se puede poner un atributo
           en el body desde un componente, y al declararse --st en este elemento
           todo lo que cuelga lo hereda igual. De ahi `[data-state="..."]` en el CSS. */}
-      <main data-state={estado}>
+      <main id="contenido" data-state={estado}>
         {/* Auto-refresco: sondea /api/estado cada 30 s y re-renderiza si cambió. */}
         <Refresco estado={estado} />
         {/* CENTRO: identidad, estado y trabajo en curso */}
