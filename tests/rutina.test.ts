@@ -75,3 +75,119 @@ test('textoDe describe cada acción y usa la etiqueta actual en el seguimiento',
   assert.match(textoDe({ tipo: 'seguimiento' }, 'Junta'), /Junta/);
   assert.match(textoDe({ tipo: 'seguimiento' }), /lo mismo/);
 });
+
+test('redisSet pide NX/EX y distingue clave ocupada de fallo', async () => {
+  const entorno = {
+    upstashUrl: process.env.UPSTASH_REDIS_REST_URL,
+    upstashToken: process.env.UPSTASH_REDIS_REST_TOKEN,
+    kvUrl: process.env.KV_REST_API_URL,
+    kvToken: process.env.KV_REST_API_TOKEN,
+  };
+  process.env.UPSTASH_REDIS_REST_URL = 'https://redis.test';
+  process.env.UPSTASH_REDIS_REST_TOKEN = 'token';
+  delete process.env.KV_REST_API_URL;
+  delete process.env.KV_REST_API_TOKEN;
+
+  const fetchOriginal = globalThis.fetch;
+  const urls: string[] = [];
+  let cuerpo: { result?: string | null } = { result: 'OK' };
+  let respuestaOk = true;
+  globalThis.fetch = (async (entrada: string | URL | Request) => {
+    urls.push(String(entrada));
+    return { ok: respuestaOk, json: async () => cuerpo } as Response;
+  }) as typeof fetch;
+
+  try {
+    const { redisSet } = await import('../lib/estado');
+    assert.equal(
+      await redisSet('rutina_slot_2026-10-26T09', '1', { nx: true, ex: 172800 }),
+      true,
+    );
+    assert.equal(
+      urls.at(-1),
+      'https://redis.test/set/rutina_slot_2026-10-26T09/1/NX/EX/172800',
+    );
+
+    // Upstash responde 200 con result null cuando NX no pisa una clave viva.
+    cuerpo = { result: null };
+    assert.equal(
+      await redisSet('rutina_slot_2026-10-26T09', '1', { nx: true, ex: 172800 }),
+      false,
+    );
+
+    respuestaOk = false;
+    assert.equal(await redisSet('estado', 'work'), false);
+  } finally {
+    globalThis.fetch = fetchOriginal;
+    process.env.UPSTASH_REDIS_REST_URL = entorno.upstashUrl;
+    process.env.UPSTASH_REDIS_REST_TOKEN = entorno.upstashToken;
+    if (entorno.kvUrl === undefined) delete process.env.KV_REST_API_URL;
+    else process.env.KV_REST_API_URL = entorno.kvUrl;
+    if (entorno.kvToken === undefined) delete process.env.KV_REST_API_TOKEN;
+    else process.env.KV_REST_API_TOKEN = entorno.kvToken;
+  }
+});
+
+test('la rutina distingue slot ya atendido de almacenamiento caído', async () => {
+  process.env.RUTINA_SECRETO = 'secreto-test';
+  process.env.UPSTASH_REDIS_REST_URL = 'https://redis.test';
+  process.env.UPSTASH_REDIS_REST_TOKEN = 'token';
+  delete process.env.TELEGRAM_BOT_TOKEN;
+  delete process.env.TELEGRAM_CHAT_ID;
+
+  const DateOriginal = globalThis.Date;
+  const FIJO = new DateOriginal('2026-10-26T15:00:00Z'); // lunes 09:00 en Jalisco
+  class FechaFija extends DateOriginal {
+    constructor(...args: unknown[]) {
+      if (args.length === 0) super(FIJO.getTime());
+      else super(...(args as [number]));
+    }
+    static now() {
+      return FIJO.getTime();
+    }
+  }
+  globalThis.Date = FechaFija as DateConstructor;
+
+  const fetchOriginal = globalThis.fetch;
+  try {
+    const { POST } = await import('../app/api/rutina/route');
+    const ejecutar = async (previo: string | null) => {
+      const llamadas: string[] = [];
+      globalThis.fetch = (async (entrada: string | URL | Request) => {
+        const url = String(entrada);
+        llamadas.push(url);
+        const result = url.includes('/set/') ? null : previo;
+        return { ok: true, json: async () => ({ result }) } as Response;
+      }) as typeof fetch;
+      const peticion = new Request('https://status.test/api/rutina', {
+        method: 'POST',
+        headers: { authorization: 'Bearer secreto-test' },
+      });
+      const respuesta = await POST(peticion);
+      return { respuesta, cuerpo: await respuesta.json(), llamadas };
+    };
+
+    const atendido = await ejecutar('1');
+    assert.equal(atendido.respuesta.status, 200);
+    assert.deepEqual(atendido.cuerpo, {
+      ok: true,
+      motivo: 'slot ya atendido',
+      slot: '2026-10-26T09',
+    });
+    assert.ok(atendido.llamadas.some((url) => url.includes('/NX/EX/')));
+
+    const caido = await ejecutar(null);
+    assert.equal(caido.respuesta.status, 200);
+    assert.deepEqual(caido.cuerpo, {
+      ok: false,
+      motivo: 'almacenamiento caído',
+      slot: '2026-10-26T09',
+    });
+  } finally {
+    globalThis.fetch = fetchOriginal;
+    globalThis.Date = DateOriginal;
+    delete process.env.RUTINA_SECRETO;
+    delete process.env.UPSTASH_REDIS_REST_URL;
+    delete process.env.UPSTASH_REDIS_REST_TOKEN;
+  }
+});
