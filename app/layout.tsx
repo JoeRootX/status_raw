@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter, JetBrains_Mono } from 'next/font/google';
+import { SITIO_URL } from '@/lib/datos';
 import './globals.css';
 
 const inter = Inter({
@@ -18,8 +19,8 @@ const DESCRIPCION =
   'Panel de estado personal de Joe: estado actual, ticket en curso, cola de Jira, último commit, Spotify, YouTube y contacto directo.';
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://status-raw.vercel.app'),
-  title: 'joerootX',
+  metadataBase: new URL(SITIO_URL),
+  title: 'joerootX · Panel de estado personal',
   description: DESCRIPCION,
   alternates: { canonical: '/' },
   openGraph: {
@@ -27,12 +28,12 @@ export const metadata: Metadata = {
     locale: 'es_MX',
     url: '/',
     siteName: 'joerootX',
-    title: 'joerootX',
+    title: 'joerootX · Panel de estado personal',
     description: DESCRIPCION,
   },
   twitter: {
     card: 'summary',
-    title: 'joerootX',
+    title: 'joerootX · Panel de estado personal',
     description: DESCRIPCION,
   },
 };

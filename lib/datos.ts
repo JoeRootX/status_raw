@@ -25,6 +25,13 @@ export const esEstadoId = (v: string): v is EstadoId => Object.hasOwn(ESTADOS, v
 export const ESTADO_ACTUAL: EstadoId = 'work';
 
 /* ============================================================
+   SITIO
+   ============================================================ */
+
+/** URL canonica sin barra final: metadata, sitemap y robots salen de aqui. */
+export const SITIO_URL = 'https://status-raw.vercel.app';
+
+/* ============================================================
    LEGAL
    ============================================================ */
 
