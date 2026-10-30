@@ -128,6 +128,37 @@ test('redisSet pide NX/EX y distingue clave ocupada de fallo', async () => {
   }
 });
 
+test('redisSet devuelve false si la red falla en vez de lanzar', async () => {
+  const entorno = {
+    upstashUrl: process.env.UPSTASH_REDIS_REST_URL,
+    upstashToken: process.env.UPSTASH_REDIS_REST_TOKEN,
+    kvUrl: process.env.KV_REST_API_URL,
+    kvToken: process.env.KV_REST_API_TOKEN,
+  };
+  process.env.UPSTASH_REDIS_REST_URL = 'https://redis.test';
+  process.env.UPSTASH_REDIS_REST_TOKEN = 'token';
+  delete process.env.KV_REST_API_URL;
+  delete process.env.KV_REST_API_TOKEN;
+
+  const fetchOriginal = globalThis.fetch;
+  globalThis.fetch = (async () => {
+    throw new Error('ECONNREFUSED');
+  }) as typeof fetch;
+
+  try {
+    const { redisSet } = await import('../lib/estado');
+    assert.equal(await redisSet('estado', 'work'), false);
+  } finally {
+    globalThis.fetch = fetchOriginal;
+    process.env.UPSTASH_REDIS_REST_URL = entorno.upstashUrl;
+    process.env.UPSTASH_REDIS_REST_TOKEN = entorno.upstashToken;
+    if (entorno.kvUrl === undefined) delete process.env.KV_REST_API_URL;
+    else process.env.KV_REST_API_URL = entorno.kvUrl;
+    if (entorno.kvToken === undefined) delete process.env.KV_REST_API_TOKEN;
+    else process.env.KV_REST_API_TOKEN = entorno.kvToken;
+  }
+});
+
 test('la rutina distingue slot ya atendido de almacenamiento caído', async () => {
   process.env.RUTINA_SECRETO = 'secreto-test';
   process.env.UPSTASH_REDIS_REST_URL = 'https://redis.test';
