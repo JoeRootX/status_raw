@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { accionRutina, accionCallback, horaLocal, idDeSlot, teclado, textoDe } from '../lib/rutina';
+import { redisSet } from '../lib/estado';
 
 /** Lunes 26 oct 2026; solo importan el día y la hora. */
 function hora(diaSemana: number, h: number) {
@@ -98,7 +99,6 @@ test('redisSet pide NX/EX y distingue clave ocupada de fallo', async () => {
   }) as typeof fetch;
 
   try {
-    const { redisSet } = await import('../lib/estado');
     assert.equal(
       await redisSet('rutina_slot_2026-10-26T09', '1', { nx: true, ex: 172800 }),
       true,
@@ -146,7 +146,6 @@ test('redisSet devuelve false si la red falla en vez de lanzar', async () => {
   }) as typeof fetch;
 
   try {
-    const { redisSet } = await import('../lib/estado');
     assert.equal(await redisSet('estado', 'work'), false);
   } finally {
     globalThis.fetch = fetchOriginal;
