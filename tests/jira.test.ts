@@ -64,6 +64,27 @@ test('sigue nextPageToken y cuenta todos los To Do', async () => {
   }
 });
 
+test('un nextPageToken repetido no duplica tickets', async () => {
+  const { colaTickets } = await import('../lib/jira');
+  const jira = simularJira((token) => {
+    if (token === null) return { cuerpo: { issues: lote(1, 5), nextPageToken: 'p2' } };
+    if (token === 'p2') return { cuerpo: { issues: lote(6, 5), nextPageToken: 'p3' } };
+    // Jira repite la página anterior y su token: los SDT-6..10 ya se leyeron.
+    return { cuerpo: { issues: lote(6, 5), nextPageToken: 'p3' } };
+  });
+
+  try {
+    const { senal } = await colaTickets();
+    if (!esListo(senal)) assert.fail(`se esperaba listo, vino ${senal.estado}`);
+
+    assert.equal(senal.datos.total, 10, 'no cuenta dos veces los tickets repetidos');
+    assert.equal(senal.datos.tickets.length, 5);
+    assert.equal(jira.llamadas.length, 3);
+  } finally {
+    jira.restaurar();
+  }
+});
+
 test('una sola página con isLast no pide más', async () => {
   const { colaTickets } = await import('../lib/jira');
   const jira = simularJira(() => ({ cuerpo: { issues: lote(1, 3), isLast: true } }));

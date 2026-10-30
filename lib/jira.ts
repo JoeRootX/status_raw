@@ -134,6 +134,7 @@ async function buscarTodas(
   maxResults: number,
 ): Promise<{ issues: Issue[]; hayMas: boolean }> {
   const issues: Issue[] = [];
+  const claves = new Set<string>();
   const vistos = new Set<string>();
   let token: string | undefined;
 
@@ -148,7 +149,15 @@ async function buscarTodas(
     }
 
     const lote = datos.issues ?? [];
-    issues.push(...lote);
+    // Si Jira repite un token puede repetir también la página: se descartan los
+    // tickets ya vistos para no contar ni pintar el mismo ticket dos veces.
+    for (const issue of lote) {
+      if (issue.key) {
+        if (claves.has(issue.key)) continue;
+        claves.add(issue.key);
+      }
+      issues.push(issue);
+    }
     token = datos.nextPageToken ?? undefined;
 
     // Sin token, con `isLast` o con una página vacía no hay a dónde seguir:
