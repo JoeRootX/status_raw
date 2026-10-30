@@ -20,7 +20,8 @@ export async function renderizarMdx(cuerpo: string) {
 
     if (!Contenido) return null;
     return <Contenido />;
-  } catch {
+  } catch (e) {
+    console.error('[mdx]', e);
     return null;
   }
 }
