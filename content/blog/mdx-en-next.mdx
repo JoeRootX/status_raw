@@ -1,0 +1,21 @@
+---
+title: "MDX en Next 16 sin romper la CSP"
+date: 2026-10-26
+tags: [nextjs, mdx]
+---
+
+El blog vive en `content/blog` como archivos `.mdx`: el frontmatter guarda el
+título, la fecha y las etiquetas, y el cuerpo se compila en el servidor.
+
+## Por qué en el servidor
+
+Compilar MDX en el navegador obliga a usar `eval`, y la CSP de este sitio solo
+permite scripts propios. Hacerlo en el servidor deja el HTML ya resuelto y el
+cliente no descarga el compilador.
+
+- Frontmatter leído sin dependencias.
+- Detalle renderizado con `@mdx-js/mdx`.
+- Listado estático, sin JavaScript extra.
+
+Si algo de esto se rompe, el post no aparece: prefiero un blog vacío a una
+página a medias.
