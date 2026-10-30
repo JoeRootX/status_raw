@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { formatearFecha, listarPosts, obtenerPost, parsearFrontmatter } from '../lib/blog';
+import { renderizarMdx } from '../lib/mdx';
 
 test('parsearFrontmatter separa metadatos y cuerpo', () => {
   const { datos, cuerpo } = parsearFrontmatter(
@@ -55,6 +57,36 @@ test('obtenerPost devuelve cuerpo sin frontmatter y rechaza slugs peligrosos', (
   assert.equal(obtenerPost('no-existe'), null);
   assert.equal(obtenerPost('../package'), null);
   assert.equal(obtenerPost('/etc/passwd'), null);
+});
+
+test('renderizarMdx compila encabezado, lista, enlace y bloque de codigo', async () => {
+  const contenido = await renderizarMdx(
+    [
+      '## Seccion',
+      '',
+      '- uno',
+      '- dos',
+      '',
+      '[Enlace](https://example.com)',
+      '',
+      '```js',
+      'const x = 1;',
+      '```',
+    ].join('\n'),
+  );
+
+  assert.ok(contenido);
+  const html = renderToStaticMarkup(contenido);
+  assert.match(html, /<h2>Seccion<\/h2>/);
+  assert.match(html, /<ul>/);
+  assert.match(html, /<li>uno<\/li>/);
+  assert.match(html, /href="https:\/\/example\.com"/);
+  assert.match(html, /<pre><code[^>]*>/);
+  assert.match(html, /const x = 1;/);
+});
+
+test('renderizarMdx devuelve null con MDX invalido', async () => {
+  assert.equal(await renderizarMdx('## Sin cerrar\n\n<div>'), null);
 });
 
 test('formatearFecha usa es-MX sin variar por zona horaria', () => {

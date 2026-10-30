@@ -320,7 +320,7 @@ button.send:disabled { opacity: .6; cursor: progress }
 .blog-lista time, .blog-meta time { color: var(--muted); font: 12px var(--mono) }
 .blog-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 6px 0 18px }
 .blog-tags { display: inline-flex; gap: 6px }
-.blog-cuerpo h2 { font-size: 14px; margin: 24px 0 6px; color: #9fc0ff }
+.blog-cuerpo h2 { font-size: 14px; margin: 24px 0 6px; color: var(--accent) }
 .blog-cuerpo p, .blog-cuerpo li { font-size: 14px; line-height: 1.7 }
 .blog-cuerpo p { margin-bottom: 12px }
 .blog-cuerpo ul, .blog-cuerpo ol { padding-left: 20px; margin-bottom: 12px }
