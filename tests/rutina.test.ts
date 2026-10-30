@@ -159,6 +159,13 @@ test('redisSet devuelve false si la red falla en vez de lanzar', async () => {
 });
 
 test('la rutina distingue slot ya atendido de almacenamiento caído', async () => {
+  const entorno = {
+    rutinaSecreto: process.env.RUTINA_SECRETO,
+    upstashUrl: process.env.UPSTASH_REDIS_REST_URL,
+    upstashToken: process.env.UPSTASH_REDIS_REST_TOKEN,
+    telegramBotToken: process.env.TELEGRAM_BOT_TOKEN,
+    telegramChatId: process.env.TELEGRAM_CHAT_ID,
+  };
   process.env.RUTINA_SECRETO = 'secreto-test';
   process.env.UPSTASH_REDIS_REST_URL = 'https://redis.test';
   process.env.UPSTASH_REDIS_REST_TOKEN = 'token';
@@ -216,8 +223,15 @@ test('la rutina distingue slot ya atendido de almacenamiento caído', async () =
   } finally {
     globalThis.fetch = fetchOriginal;
     globalThis.Date = DateOriginal;
-    delete process.env.RUTINA_SECRETO;
-    delete process.env.UPSTASH_REDIS_REST_URL;
-    delete process.env.UPSTASH_REDIS_REST_TOKEN;
+    if (entorno.rutinaSecreto === undefined) delete process.env.RUTINA_SECRETO;
+    else process.env.RUTINA_SECRETO = entorno.rutinaSecreto;
+    if (entorno.upstashUrl === undefined) delete process.env.UPSTASH_REDIS_REST_URL;
+    else process.env.UPSTASH_REDIS_REST_URL = entorno.upstashUrl;
+    if (entorno.upstashToken === undefined) delete process.env.UPSTASH_REDIS_REST_TOKEN;
+    else process.env.UPSTASH_REDIS_REST_TOKEN = entorno.upstashToken;
+    if (entorno.telegramBotToken === undefined) delete process.env.TELEGRAM_BOT_TOKEN;
+    else process.env.TELEGRAM_BOT_TOKEN = entorno.telegramBotToken;
+    if (entorno.telegramChatId === undefined) delete process.env.TELEGRAM_CHAT_ID;
+    else process.env.TELEGRAM_CHAT_ID = entorno.telegramChatId;
   }
 });
