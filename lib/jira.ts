@@ -14,6 +14,16 @@ export type TicketEnCola = {
   enlace?: string | null;
 };
 
+/** Lo que pinta la tarjeta de la cola: las visibles y cuántas hay en total. */
+export type ColaTickets = {
+  /** Solo las que caben en la tarjeta; el resto se cuenta pero no se pinta. */
+  tickets: TicketEnCola[];
+  /** Tickets To Do contados siguiendo `nextPageToken`. */
+  total: number;
+  /** `true` si el total es un mínimo: se llegó al tope o falló una página. */
+  hayMas: boolean;
+};
+
 export const TICKET_ACTUAL_EJEMPLO: TicketActual = {
   clave: 'SDT-1738',
   resumen: 'Crear Endpoints para los nuevos tipos de solicitudes',
@@ -43,6 +53,11 @@ const JQL_COLA =
   process.env.JIRA_JQL_COLA ??
   'assignee = currentUser() AND statusCategory = "To Do" ORDER BY priority DESC, created ASC';
 
+/** Los tickets que caben en la tarjeta; el resto solo se cuenta. */
+export const COLA_PAGINA = 5;
+/** Tope de páginas: 10 × 5 = 50. Corta un `nextPageToken` que no termine nunca. */
+export const COLA_MAX_PAGINAS = 10;
+
 function credenciales() {
   if (!JIRA_BASE_URL || !JIRA_EMAIL || !JIRA_API_TOKEN) return null;
   return {
@@ -61,7 +76,11 @@ type Issue = {
   };
 };
 
-type Busqueda = { issues?: Issue[] };
+type Pagina = {
+  issues?: Issue[];
+  nextPageToken?: string | null;
+  isLast?: boolean;
+};
 
 /** Prioridades de Jira (clásicas y de esquema nuevo) a las clases de la tarjeta. */
 function prioridadDe(nombre?: string | null): TicketEnCola['prioridad'] {
@@ -76,19 +95,21 @@ function prioridadDe(nombre?: string | null): TicketEnCola['prioridad'] {
 /**
  * `GET /rest/api/3/search/jql`: el endpoint nuevo; el viejo `/search` ya
  * devuelve 410 Gone en Cloud. Se usa GET con query params (POST también vale),
- * con `fields` explícitos y paginación por `nextPageToken` (aquí no hace falta:
- * nunca pedimos más de 5).
+ * con `fields` explícitos y `nextPageToken` para pedir la página siguiente.
  */
-async function buscar(jql: string, maxResults: number): Promise<Issue[]> {
+async function buscarPagina(jql: string, maxResults: number, token?: string): Promise<Pagina> {
   const creds = credenciales();
-  if (!creds) return [];
+  if (!creds) return {};
 
-  const url = new URL(`${creds.base}/rest/api/3/search/jql`);
-  url.search = new URLSearchParams({
+  const params = new URLSearchParams({
     jql,
     fields: 'summary,status,priority',
     maxResults: String(maxResults),
-  }).toString();
+  });
+  if (token) params.set('nextPageToken', token);
+
+  const url = new URL(`${creds.base}/rest/api/3/search/jql`);
+  url.search = params.toString();
 
   const respuesta = await fetch(url, {
     headers: {
@@ -99,8 +120,46 @@ async function buscar(jql: string, maxResults: number): Promise<Issue[]> {
   });
   if (!respuesta.ok) throw new Error(`search/jql ${respuesta.status}`);
 
-  const datos = (await respuesta.json()) as Busqueda;
-  return datos.issues ?? [];
+  return (await respuesta.json()) as Pagina;
+}
+
+/**
+ * Recorre la cola siguiendo `nextPageToken` para saber cuántos To Do hay de
+ * verdad. La primera página manda: si falla, es un fallo de la fuente. Si falla
+ * una siguiente, se queda con lo ya leído y lo marca con `hayMas` en vez de
+ * tirar la tarjeta entera.
+ */
+async function buscarTodas(
+  jql: string,
+  maxResults: number,
+): Promise<{ issues: Issue[]; hayMas: boolean }> {
+  const issues: Issue[] = [];
+  const vistos = new Set<string>();
+  let token: string | undefined;
+
+  for (let pagina = 1; pagina <= COLA_MAX_PAGINAS; pagina++) {
+    let datos: Pagina;
+    try {
+      datos = await buscarPagina(jql, maxResults, token);
+    } catch (error) {
+      if (pagina === 1) throw error;
+      console.error('[jira] paginación interrumpida:', error);
+      return { issues, hayMas: true };
+    }
+
+    const lote = datos.issues ?? [];
+    issues.push(...lote);
+    token = datos.nextPageToken ?? undefined;
+
+    // Sin token, con `isLast` o con una página vacía no hay a dónde seguir:
+    // insistir con el mismo token solo repetiría tickets.
+    if (!token || datos.isLast || lote.length === 0 || vistos.has(token)) {
+      return { issues, hayMas: false };
+    }
+    vistos.add(token);
+  }
+
+  return { issues, hayMas: true };
 }
 
 const enlaceDe = (base: string, clave: string) => `${base}/browse/${clave}`;
@@ -111,8 +170,8 @@ export async function ticketActual(): Promise<Fuente<TicketActual>> {
     return { modo: 'manual', senal: listo(TICKET_ACTUAL_EJEMPLO) };
   }
   try {
-    const issues = await buscar(JQL_ACTUAL, 1);
-    const issue = issues[0];
+    const pagina = await buscarPagina(JQL_ACTUAL, 1);
+    const issue = pagina.issues?.[0];
     if (!issue?.key) {
       return { modo: 'auto', senal: vacio('No hay ningún ticket en curso.') };
     }
@@ -131,28 +190,38 @@ export async function ticketActual(): Promise<Fuente<TicketActual>> {
   }
 }
 
-export async function colaTickets(): Promise<Fuente<TicketEnCola[]>> {
+export async function colaTickets(): Promise<Fuente<ColaTickets>> {
   const creds = credenciales();
   if (!creds) {
-    return { modo: 'manual', senal: listo(COLA_TICKETS_EJEMPLO) };
+    return {
+      modo: 'manual',
+      senal: listo({
+        tickets: COLA_TICKETS_EJEMPLO.slice(0, COLA_PAGINA),
+        total: COLA_TICKETS_EJEMPLO.length,
+        hayMas: false,
+      }),
+    };
   }
   try {
-    const issues = await buscar(JQL_COLA, 5);
-    if (issues.length === 0) {
+    const { issues, hayMas } = await buscarTodas(JQL_COLA, COLA_PAGINA);
+    const tickets = issues
+      .filter((issue): issue is Issue & { key: string } => Boolean(issue.key))
+      .map((issue) => ({
+        clave: issue.key,
+        resumen: issue.fields?.summary ?? issue.key,
+        prioridad: prioridadDe(issue.fields?.priority?.name),
+        enlace: enlaceDe(creds.base, issue.key),
+      }));
+    if (tickets.length === 0) {
       return { modo: 'auto', senal: vacio('La cola de tickets está vacía.') };
     }
     return {
       modo: 'auto',
-      senal: listo(
-        issues
-          .filter((issue): issue is Issue & { key: string } => Boolean(issue.key))
-          .map((issue) => ({
-            clave: issue.key,
-            resumen: issue.fields?.summary ?? issue.key,
-            prioridad: prioridadDe(issue.fields?.priority?.name),
-            enlace: enlaceDe(creds.base, issue.key),
-          })),
-      ),
+      senal: listo({
+        tickets: tickets.slice(0, COLA_PAGINA),
+        total: tickets.length,
+        hayMas,
+      }),
     };
   } catch (error) {
     console.error('[jira] fallo colaTickets:', error);
