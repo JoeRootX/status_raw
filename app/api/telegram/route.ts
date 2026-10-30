@@ -195,6 +195,8 @@ export async function POST(request: Request) {
       return Response.json({ ok: guardado, motivo: 'estado cambiado' });
     } catch (error) {
       console.error('[telegram-webhook] error procesando callback:', error);
+      // El toast se pierde al cerrar la app: además queda el mensaje en el chat.
+      await contestar(chatId, 'No se pudo guardar el estado en el panel. Intenta de nuevo.');
       await responderBoton(callback.id, 'Algo falló, intenta de nuevo');
       return Response.json({ ok: false, motivo: 'error interno' }, { status: 200 });
     }

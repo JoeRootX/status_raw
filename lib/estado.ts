@@ -53,10 +53,17 @@ export async function redisSet(
     `/set/${encodeURIComponent(clave)}/${encodeURIComponent(valor)}` +
     (opciones.nx ? '/NX' : '') +
     (opciones.ex ? `/EX/${Math.floor(opciones.ex)}` : '');
-  const respuesta = await fetch(new URL(ruta, REST_URL), {
-    headers: { Authorization: `Bearer ${REST_TOKEN}` },
-    signal: AbortSignal.timeout(8_000),
-  });
+  let respuesta: Response;
+  try {
+    respuesta = await fetch(new URL(ruta, REST_URL), {
+      headers: { Authorization: `Bearer ${REST_TOKEN}` },
+      signal: AbortSignal.timeout(8_000),
+    });
+  } catch (error) {
+    // Redis caído o red sin salida: el llamador decide (no debe tumbar la ruta).
+    console.error('[estado] no se pudo escribir en Redis:', error);
+    return false;
+  }
   if (!respuesta.ok) return false;
   // Con NX, Upstash contesta 200 y `result: null` si la clave ya existía.
   if (!opciones.nx) return true;
