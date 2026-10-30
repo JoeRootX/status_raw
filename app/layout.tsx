@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter, JetBrains_Mono } from 'next/font/google';
-import { COLOR_ESTADO } from '@/lib/datos';
+import { COLOR_ESTADO, SITIO_URL } from '@/lib/datos';
 import { estadoActual } from '@/lib/estado';
 import './globals.css';
 
@@ -20,8 +20,8 @@ const DESCRIPCION =
   'Panel de estado personal de Joe: estado actual, ticket en curso, cola de Jira, último commit, Spotify, YouTube y contacto directo.';
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://status-raw.vercel.app'),
-  title: 'joerootX',
+  metadataBase: new URL(SITIO_URL),
+  title: 'joerootX · Panel de estado personal',
   description: DESCRIPCION,
   alternates: { canonical: '/' },
   openGraph: {
@@ -29,12 +29,12 @@ export const metadata: Metadata = {
     locale: 'es_MX',
     url: '/',
     siteName: 'joerootX',
-    title: 'joerootX',
+    title: 'joerootX · Panel de estado personal',
     description: DESCRIPCION,
   },
   twitter: {
     card: 'summary',
-    title: 'joerootX',
+    title: 'joerootX · Panel de estado personal',
     description: DESCRIPCION,
   },
 };
@@ -52,7 +52,13 @@ export async function generateViewport(): Promise<Viewport> {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es" className={`${inter.variable} ${mono.variable}`}>
-      <body>{children}</body>
+      <body>
+        {/* Primer elemento enfocable: con Tab se revela y salta al contenido. */}
+        <a className="skip-link" href="#contenido">
+          Saltar al contenido
+        </a>
+        {children}
+      </body>
     </html>
   );
 }

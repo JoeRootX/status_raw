@@ -36,6 +36,13 @@ export const COLOR_ESTADO = {
 } as const satisfies Record<EstadoId, string>;
 
 /* ============================================================
+   SITIO
+   ============================================================ */
+
+/** URL canonica sin barra final: metadata, sitemap y robots salen de aqui. */
+export const SITIO_URL = 'https://status-raw.vercel.app';
+
+/* ============================================================
    LEGAL
    ============================================================ */
 
