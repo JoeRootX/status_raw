@@ -182,3 +182,17 @@ test('Jira caído no rompe: la señal es error', async () => {
     jira.restaurar();
   }
 });
+
+test('sin JQL alternativo la segunda bandeja queda apagada', async () => {
+  const { jqlAlternativo } = await import('../lib/jira');
+  assert.equal(jqlAlternativo(undefined), null);
+  assert.equal(jqlAlternativo(''), null);
+  assert.equal(jqlAlternativo('   '), null);
+});
+
+test('el JQL alternativo configurado se usa tal cual, sin espacios de sobra', async () => {
+  const { jqlAlternativo } = await import('../lib/jira');
+  const jql = 'assignee = currentUser() AND project = OTRO ORDER BY updated DESC';
+  assert.equal(jqlAlternativo(jql), jql);
+  assert.equal(jqlAlternativo(`  ${jql}  `), jql);
+});

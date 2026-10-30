@@ -153,6 +153,15 @@ De referencia queda `scripts/cron-setup.mjs` (`npm run cron:setup`), el
 equivalente con QStash si algún día Actions dejara de servir (necesita
 `QSTASH_TOKEN` en la variable de entorno).
 
+## Segundo Jira personal
+
+La tarjeta "Segundo Jira" consulta el mismo endpoint y con las mismas
+credenciales que la cola principal, pero con otro JQL. Se activa definiendo
+`JIRA_JQL_ALT` (por ejemplo, `assignee = currentUser() AND project = OTRO
+ORDER BY updated DESC`); si la variable falta o está vacía, la tarjeta no se
+pinta y el panel queda igual que antes. La ruta `/api/jira/alt` expone esa
+misma fuente.
+
 ## Verificación
 
 El proyecto tiene una cultura de verificación end-to-end: los rounds se corrigen

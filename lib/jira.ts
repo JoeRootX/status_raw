@@ -37,6 +37,16 @@ export const COLA_TICKETS_EJEMPLO: TicketEnCola[] = [
   { clave: 'SDT-1739', resumen: 'Notificaciones en tiempo real', prioridad: 'baja', enlace: null },
 ];
 
+/**
+ * Ejemplo de la segunda bandeja. Solo se pinta si hay JQL alternativo
+ * configurado pero faltan credenciales; asi el modo manual sigue el mismo
+ * contrato que el resto de fuentes.
+ */
+export const COLA_TICKETS_ALT_EJEMPLO: TicketEnCola[] = [
+  { clave: 'SDT-1755', resumen: 'Revisar propuestas del segundo tablero', prioridad: 'alta', enlace: null },
+  { clave: 'SDT-1756', resumen: 'Preparar informe semanal', prioridad: 'media', enlace: null },
+];
+
 const JIRA_BASE_URL = process.env.JIRA_BASE_URL;
 const JIRA_EMAIL = process.env.JIRA_EMAIL;
 const JIRA_API_TOKEN = process.env.JIRA_API_TOKEN;
@@ -57,6 +67,18 @@ const JQL_COLA =
 export const COLA_PAGINA = 5;
 /** Tope de páginas: 10 × 5 = 50. Corta un `nextPageToken` que no termine nunca. */
 export const COLA_MAX_PAGINAS = 10;
+
+/**
+ * JQL del segundo Jira personal: mismo endpoint y mismas credenciales, otra
+ * consulta. Sin `JIRA_JQL_ALT` la segunda tarjeta no se pinta, asi que quien
+ * solo tiene una cuenta no ve nada distinto.
+ */
+export function jqlAlternativo(
+  valor: string | undefined = process.env.JIRA_JQL_ALT,
+): string | null {
+  const jql = valor?.trim();
+  return jql ? jql : null;
+}
 
 function credenciales() {
   if (!JIRA_BASE_URL || !JIRA_EMAIL || !JIRA_API_TOKEN) return null;
@@ -173,6 +195,15 @@ async function buscarTodas(
 
 const enlaceDe = (base: string, clave: string) => `${base}/browse/${clave}`;
 
+function aTicketEnCola(issue: Issue & { key: string }, base: string): TicketEnCola {
+  return {
+    clave: issue.key,
+    resumen: issue.fields?.summary ?? issue.key,
+    prioridad: prioridadDe(issue.fields?.priority?.name),
+    enlace: enlaceDe(base, issue.key),
+  };
+}
+
 export async function ticketActual(): Promise<Fuente<TicketActual>> {
   const creds = credenciales();
   if (!creds) {
@@ -235,5 +266,39 @@ export async function colaTickets(): Promise<Fuente<ColaTickets>> {
   } catch (error) {
     console.error('[jira] fallo colaTickets:', error);
     return { modo: 'auto', senal: fallo('No se pudo consultar Jira ahora mismo.') };
+  }
+}
+
+/**
+ * Segundo Jira personal: la misma cuenta y el mismo endpoint, pero con el JQL
+ * de `JIRA_JQL_ALT`. Devuelve `null` cuando no hay JQL configurado para que la
+ * tarjeta no aparezca (no es un error, es una funcion apagada).
+ */
+export async function colaTicketsAlt(): Promise<Fuente<TicketEnCola[]> | null> {
+  const jql = jqlAlternativo();
+  if (!jql) return null;
+
+  const creds = credenciales();
+  if (!creds) {
+    return { modo: 'manual', senal: listo(COLA_TICKETS_ALT_EJEMPLO) };
+  }
+
+  try {
+    const pagina = await buscarPagina(jql, 5);
+    const issues = pagina.issues ?? [];
+    if (issues.length === 0) {
+      return { modo: 'auto', senal: vacio('El segundo Jira no tiene tickets en cola.') };
+    }
+    return {
+      modo: 'auto',
+      senal: listo(
+        issues
+          .filter((issue): issue is Issue & { key: string } => Boolean(issue.key))
+          .map((issue) => aTicketEnCola(issue, creds.base)),
+      ),
+    };
+  } catch (error) {
+    console.error('[jira] fallo colaTicketsAlt:', error);
+    return { modo: 'auto', senal: fallo('No se pudo consultar el segundo Jira ahora mismo.') };
   }
 }
