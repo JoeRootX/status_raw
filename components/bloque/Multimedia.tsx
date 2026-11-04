@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import type { Cancion } from '@/lib/spotify';
 import type { Video } from '@/lib/youtube';
 import type { Fuente } from '@/lib/fuente';
@@ -13,14 +14,20 @@ function Barra({ avance }: { avance: number }) {
 
 /**
  * El thumb por defecto es el degradado del CSS. Cuando la fuente trae portada
- * (álbum de Spotify, miniatura de YouTube), la pinta encima con
- * background-size: cover — sin petición extra, la URL ya viene en los datos.
+ * (álbum de Spotify, miniatura de YouTube) la pinta encima con next/image:
+ * el optimizador sirve el tamaño exacto (64 px) y difiere la carga.
  */
-function Thumb({ imagen }: { imagen?: string | null }) {
+function Thumb({ imagen, alt }: { imagen?: string | null; alt: string }) {
+  if (!imagen) return <div className="thumb" aria-hidden="true" />;
+
   return (
-    <div
+    <Image
       className="thumb"
-      style={imagen ? { backgroundImage: `url(${imagen})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
+      src={imagen}
+      alt={alt}
+      width={64}
+      height={64}
+      sizes="64px"
     />
   );
 }
@@ -43,7 +50,7 @@ export default function Multimedia({ spotify, youtube }: Props) {
               <>
                 <small>{cancion.escuchandoAhora ? 'Reproduciendo…' : 'Última canción…'}</small>
                 <div className="media-card">
-                  <Thumb imagen={cancion.imagen} />
+                  <Thumb imagen={cancion.imagen} alt={`Portada de ${cancion.titulo}`} />
                   <div>
                     <strong>{cancion.titulo}</strong>
                     <br />
@@ -65,7 +72,7 @@ export default function Multimedia({ spotify, youtube }: Props) {
               <>
                 <small>{video.viendoAhora ? 'Reproduciendo…' : 'Último video visto…'}</small>
                 <div className="media-card">
-                  <Thumb imagen={video.imagen ?? null} />
+                  <Thumb imagen={video.imagen ?? null} alt={`Miniatura de ${video.titulo}`} />
                   <div>
                     <strong>{video.titulo}</strong>
                     <br />

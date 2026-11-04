@@ -185,7 +185,7 @@ main {
 
 /* ===== SPOTIFY / YOUTUBE ===== */
 .media-card { display: grid; grid-template-columns: 64px 1fr; gap: 14px; margin-top: 12px; align-items: center; min-width: 0 }
-.thumb { width: 64px; height: 64px; border-radius: 8px; background: linear-gradient(135deg, #2a3f7a, #7a3fa0); flex: none }
+.thumb { width: 64px; height: 64px; border-radius: 8px; background: linear-gradient(135deg, #2a3f7a, #7a3fa0); flex: none; object-fit: cover }
 .bar { height: 4px; border-radius: 4px; background: var(--line); margin-top: 10px }
 .bar span { display: block; height: 100%; width: 42%; border-radius: 4px; background: var(--accent) }
 
