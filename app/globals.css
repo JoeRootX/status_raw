@@ -116,6 +116,25 @@ main {
 .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--st); box-shadow: 0 0 12px var(--st); flex: none }
 .me p { font-family: var(--mono); color: var(--muted); margin-top: 6px; font-size: 13px }
 
+/* Letrero LIVE del directo de Twitch: solo aparece si el entorno lo marca. */
+.live {
+  display: inline-flex; align-items: center; gap: 7px;
+  margin-bottom: 14px; padding: 4px 12px; border-radius: var(--r-pill);
+  font: 700 11px var(--mono); letter-spacing: .14em; text-decoration: none;
+  color: #fff; background: #e91916;
+  box-shadow: 0 0 12px #ff2d20, 0 0 30px rgba(255, 45, 32, .55);
+  transition: box-shadow .3s ease, background .3s ease
+}
+.live::before {
+  content: ''; width: 7px; height: 7px; border-radius: 50%; background: #fff;
+  animation: latido 1.4s ease-in-out infinite
+}
+.live:hover { background: #ff2d20; box-shadow: 0 0 16px #ff2d20, 0 0 44px rgba(255, 45, 32, .7) }
+@keyframes latido {
+  0%, 100% { opacity: 1; transform: scale(1) }
+  50% { opacity: .35; transform: scale(.75) }
+}
+
 /* ===== TARJETAS DEL CENTRO =====
    Container queries: la rejilla responde al ancho real del bloque central, no al del
    viewport, que en el layout de 3 columnas varía entre ~680px y ~1000px. */
