@@ -3,6 +3,7 @@ import { cancionActual } from '@/lib/spotify';
 import { videoActual } from '@/lib/youtube';
 import { colaTickets, colaTicketsAlt, ticketActual } from '@/lib/jira';
 import { estadoActual } from '@/lib/estado';
+import { esPanelPublico } from '@/lib/privacidad';
 import ChipsEstado from '@/components/bloque/ChipsEstado';
 import ContactForm from '@/components/bloque/ContactForm';
 import Footer from '@/components/bloque/Footer';
@@ -19,6 +20,26 @@ import Refresco from '@/components/bloque/Refresco';
 export const revalidate = 300;
 
 export default async function Inicio() {
+  // Modo privado (por defecto): tarjeta estatica. Sin estado, sin Jira, sin
+  // musica, sin video y sin formulario. Ni siquiera se llama a las fuentes:
+  // si no se piden, no se pueden filtrar por error en el HTML.
+  if (!esPanelPublico()) {
+    return (
+      <>
+        <header className="top">
+          <div className="brand">&gt; joerootX_</div>
+          <Reloj />
+        </header>
+        <main id="contenido">
+          <section className="center">
+            <Identidad />
+          </section>
+        </main>
+        <Footer />
+      </>
+    );
+  }
+
   // Las fuentes en paralelo: el estado no depende de las demas, asi que
   // esperar primero la suya y luego el resto alargaba la primera pinta sin motivo.
   const [estado, commit, spotify, youtube, ticket, cola, colaAlt] = await Promise.all([

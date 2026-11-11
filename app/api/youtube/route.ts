@@ -1,8 +1,10 @@
 import { videoActual } from '@/lib/youtube';
+import { esPanelPublico, noDisponible } from '@/lib/privacidad';
 
 export const revalidate = 0;
 
 export async function GET() {
+  if (!esPanelPublico()) return noDisponible();
   const fuente = await videoActual();
   return Response.json(fuente, {
     headers: {

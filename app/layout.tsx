@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Inter, JetBrains_Mono } from 'next/font/google';
 import { COLOR_ESTADO, SITIO_URL } from '@/lib/datos';
 import { estadoActual } from '@/lib/estado';
+import { esPanelPublico } from '@/lib/privacidad';
 import './globals.css';
 
 const inter = Inter({
@@ -16,8 +17,14 @@ const mono = JetBrains_Mono({
   display: 'swap',
 });
 
-const DESCRIPCION =
-  'Panel de estado personal de Joe: estado actual, ticket en curso, cola de Jira, último commit, Spotify, YouTube y contacto directo.';
+/**
+ * La descripcion cambia con el modo: con el panel cerrado no se anuncia en
+ * buscadores ni en tarjetas sociales que aqui se publicaba actividad, Jira o
+ * musica. Esos metadatos tambien son superficie de fuga.
+ */
+const DESCRIPCION = esPanelPublico()
+  ? 'Panel de estado personal de Joe: estado actual, ticket en curso, cola de Jira, último commit, Spotify, YouTube y contacto directo.'
+  : 'joerootX — desarrollo de software, auditoría de código y creación de contenido.';
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITIO_URL),
@@ -45,6 +52,9 @@ export const metadata: Metadata = {
  * `revalidateTag('estado')` del webhook tambien refresca este metadato.
  */
 export async function generateViewport(): Promise<Viewport> {
+  // El theme-color sigue al estado y por eso tambien lo delata: es un canal
+  // lateral (la barra del navegador cambia de color). Cerrado, color neutro.
+  if (!esPanelPublico()) return { themeColor: '#111214' };
   const estado = await estadoActual();
   return { themeColor: COLOR_ESTADO[estado] };
 }
