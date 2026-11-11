@@ -1,11 +1,17 @@
 import Image from 'next/image';
 import { ESTADOS, type EstadoId } from '@/lib/datos';
+import { CANAL_TWITCH, TEXTO_LIVE, estaEnDirecto } from '@/lib/twitch';
 
 export default function Identidad({ estado }: { estado: EstadoId }) {
   const { titulo, lema } = ESTADOS[estado];
 
   return (
     <div className="me">
+      {estaEnDirecto() && (
+        <a className="live" href={CANAL_TWITCH} target="_blank" rel="noopener noreferrer">
+          {TEXTO_LIVE}
+        </a>
+      )}
       <Image
         className="avatar"
         src="/avatar.jpg"
