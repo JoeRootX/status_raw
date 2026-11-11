@@ -130,6 +130,7 @@ main {
   animation: latido 1.4s ease-in-out infinite
 }
 .live:hover { background: #ff2d20; box-shadow: 0 0 16px #ff2d20, 0 0 44px rgba(255, 45, 32, .7) }
+.live:focus-visible { outline: 2px solid #fff; outline-offset: 2px }
 @keyframes latido {
   0%, 100% { opacity: 1; transform: scale(1) }
   50% { opacity: .35; transform: scale(.75) }
