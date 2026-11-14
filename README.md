@@ -1,8 +1,27 @@
 # joerootX
 
-Panel de estado personal: dónde está Joe ahora mismo, en qué ticket trabaja, qué hay
-en la cola de Jira, qué está sonando y qué video se está viendo, más un formulario de
-contacto por Telegram.
+Sitio personal de Joe: identidad profesional, blog, certificaciones y CV.
+
+## Modo público del panel
+
+El panel de actividad (estado en vivo, ticket en curso, cola de Jira, Spotify,
+YouTube y formulario de contacto) está **apagado por defecto**. Solo se publica
+si `PANEL_PUBLICO=true` está presente en el entorno del despliegue.
+
+Con el panel cerrado:
+
+- `/` muestra la tarjeta de identidad, sin estado ni actividad.
+- `/api/estado`, `/api/jira/*`, `/api/spotify`, `/api/youtube` y `/api/contacto`
+  responden 404.
+- `robots.txt` bloquea todo el sitio.
+- La metadata y el `theme-color` no anuncian actividad.
+
+`PANEL_PUBLICO` se evalúa en **build** para `/` (página estática) y en **runtime**
+para las rutas API: cambiarlo exige volver a desplegar.
+
+Motivo: la auditoría de huella del 2026-11-11 encontró que el panel publicaba en
+vivo la rutina, los títulos de tickets internos del trabajo y el repositorio
+laboral. Abrirlo es una decisión explícita, no un descuido de despliegue.
 
 ## Poner en marcha
 
@@ -152,6 +171,32 @@ disparo, así que el workflow puede correr 7 días sin molestar.
 De referencia queda `scripts/cron-setup.mjs` (`npm run cron:setup`), el
 equivalente con QStash si algún día Actions dejara de servir (necesita
 `QSTASH_TOKEN` en la variable de entorno).
+
+## Segundo Jira personal
+
+La tarjeta "Segundo Jira" consulta el mismo endpoint y con las mismas
+credenciales que la cola principal, pero con otro JQL. Se activa definiendo
+`JIRA_JQL_ALT` (por ejemplo, `assignee = currentUser() AND project = OTRO
+ORDER BY updated DESC`); si la variable falta o está vacía, la tarjeta no se
+pinta y el panel queda igual que antes. La ruta `/api/jira/alt` expone esa
+misma fuente.
+## Monitoreo de fuentes y digest por correo
+
+`GET|POST /api/monitor` revisa en paralelo las mismas fuentes que pinta la
+página (GitHub, Jira actual, cola de Jira, Spotify y YouTube), arma un digest y
+lo manda por correo. La clasificación vive en `lib/monitor.ts` y el envío en
+`lib/correo.ts` (Resend por HTTP, sin dependencias nuevas).
+
+El cron lo declara `vercel.json`: todos los días a las `0 14 * * *` UTC (8:00 de
+Jalisco) Vercel golpea el endpoint con `Authorization: Bearer CRON_SECRET`.
+`CRON_SECRET` es la env que Vercel usa para firmar sus crons; alternativamente
+se acepta `MONITOR_SECRETO` para dispararlo a mano o desde QStash. Sin ninguna
+de las dos el endpoint responde 401, como `/api/rutina`.
+
+El correo necesita `RESEND_API_KEY`, `MONITOR_EMAIL_FROM` y `MONITOR_EMAIL_TO`.
+Sin ellas el envío sale en modo simulado (`correo.simulado: true` en la
+respuesta) y la revisión de fuentes se hace igual. Un fallo real de una fuente
+se reporta como `estado: 'error'` en la respuesta y en el asunto del digest.
 
 ## Verificación
 

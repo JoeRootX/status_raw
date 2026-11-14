@@ -12,6 +12,8 @@
  * vive en UTC, así que `new Date().getHours()` daría otra hora.
  */
 
+import { esEstadoId, type EstadoId } from './datos';
+
 export const RUTINA_TZ = 'America/Mexico_City';
 
 type HoraLocal = {
@@ -108,4 +110,15 @@ export function teclado(): Teclado {
       [BOTON('🍚 Ausente', 'eat'), BOTON('👥 Junta', 'meet'), BOTON('✅ Sigo así', 'sigo')],
     ],
   };
+}
+
+/* El webhook parsea aquí lo que produce `teclado()`, no con un split suelto:
+   si mañana cambia el formato del botón, ambos lados cambian juntos. */
+export type AccionCallback = { tipo: 'estado'; id: EstadoId } | { tipo: 'sigo' };
+
+export function accionCallback(data: string | undefined): AccionCallback | null {
+  const [prefijo, valor, ...resto] = (data ?? '').split(':');
+  if (prefijo !== 'estado' || !valor || resto.length > 0) return null;
+  if (valor === 'sigo') return { tipo: 'sigo' };
+  return esEstadoId(valor) ? { tipo: 'estado', id: valor } : null;
 }

@@ -14,13 +14,13 @@ const IPsLocales = Object.values(networkInterfaces())
 
 /**
  * Cabeceras de seguridad, ajustadas a lo que este sitio de verdad carga:
- * - style-src con 'unsafe-inline': el <Thumb> de Multimedia pinta el background
- *   de la portada con style inline; sin esto todas las caratulas se romperian.
+ * - style-src con 'unsafe-inline': el bootstrap de App Router inlinea estilos;
+ *   las caratulas ya no usan style inline (van con next/image).
  * - script-src con 'unsafe-inline': el bootstrap/hidratacion de App Router
  *   inlinea el payload; 'strict-dynamic' con nonces no aporta aqui y romperia
  *   la hidratacion.
- * - img-src cubre los thumbs de Spotify (la.url en <img> si se usa) y YouTube
- *   (i.ytimg.com, ahora via CSS background-image, que tambien cae en img-src).
+ * - img-src cubre los thumbs de Spotify (i.scdn.co) y YouTube (i.ytimg.com),
+ *   que next/image sirve optimizados desde /_next/image ('self').
  * - connect-src 'self': el poller solo habla con /api/*.
  * - frame-ancestors 'none' + X-Frame-Options: el panel no es para iframes.
  */
@@ -39,6 +39,14 @@ const CSP = [
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: IPsLocales,
+  // next/image solo optimiza remotos declarados aqui. Son los mismos hosts que
+  // permite img-src en la CSP.
+  images: {
+    remotePatterns: [
+      { protocol: 'https', hostname: 'i.scdn.co' },
+      { protocol: 'https', hostname: 'i.ytimg.com' },
+    ],
+  },
   async headers() {
     return [
       {

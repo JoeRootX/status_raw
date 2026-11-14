@@ -1,5 +1,6 @@
 import { validarCampos, type Campo } from '@/lib/validacion';
 import { enviarATelegram, type MensajeContacto } from '@/lib/telegram';
+import { esPanelPublico, noDisponible } from '@/lib/privacidad';
 
 export const revalidate = 0;
 
@@ -23,6 +24,10 @@ function leerTexto(cuerpo: Cuerpo, campo: Campo): string {
 }
 
 export async function POST(request: Request) {
+  // Con el panel cerrado el formulario no se pinta y la ruta no acepta nada:
+  // sin formulario visible no hay motivo legitimo para recibir PII por aqui.
+  if (!esPanelPublico()) return noDisponible();
+
   const ip = (request.headers.get('x-forwarded-for') ?? 'local').split(',')[0]?.trim() || 'local';
 
   const ahora = Date.now();

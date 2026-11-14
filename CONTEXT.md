@@ -92,6 +92,14 @@ capturas/                    # 0375.png, 0768.png, 1440.png, legal.png
    de parsear y se cae a `recently-played`.
 10. **Jira `GET /rest/api/3/search/jql`**: el endpoint nuevo; el viejo `/search`
     devuelve 410 Gone en Cloud. Se usa GET con query params (POST también vale).
+11. **Modo privado por defecto (`PANEL_PUBLICO`)**: el panel publica rutina y
+    datos de trabajo, así que el silencio es el estado inicial y abrirlo es
+    explícito. El flag se lee en cada llamada (`esPanelPublico()`), no al
+    importar, igual que `configRedis`, para que los tests fijen el entorno
+    después del import. Cerrado: `/` no llama a ninguna fuente (si no se pide,
+    no se filtra), las rutas de lectura devuelven 404 (no 403: no confirma que
+    existan) y `robots.txt` bloquea todo. Ojo: `/` es estática, así que el flag
+    se congela en build; las rutas API lo leen en runtime.
 
 ## Fuentes de datos
 | Bloque | Estado | Fuente / degradación |
@@ -204,6 +212,12 @@ cae al ejemplo: muestra el estado de error.
   fuentes con red y componentes).
 
 ## Historial de revisiones
+
+- **11 nov 2026** — B4 de la auditoría de huella: modo privado por defecto
+  (`PANEL_PUBLICO`). `/` deja de pedir las seis fuentes y muestra solo la
+  tarjeta de identidad; `/api/estado`, `/api/jira/*`, `/api/spotify`,
+  `/api/youtube` y `/api/contacto` devuelven 404; `robots.txt` bloquea todo;
+  metadata y `theme-color` neutros. Tests de SEO cubren los dos modos.
 - **15 oct 2026** — Ronda post-despliegue: `revalidateTag(expire:0)`, tags de
   prioridad Jira, 6 fuentes en paralelo, cache del token de Spotify, poller con
   `visibilitychange`, escape del webhook, cabeceras de seguridad, limpieza de

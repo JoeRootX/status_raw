@@ -24,6 +24,24 @@ export const esEstadoId = (v: string): v is EstadoId => Object.hasOwn(ESTADOS, v
 /** Donde esta Joe ahora mismo. Lo sobrescribe el bot de Telegram. */
 export const ESTADO_ACTUAL: EstadoId = 'work';
 
+/** Color de la barra del navegador (theme-color) por estado. Son los mismos
+ *  tokens --work/--personal/... de globals.css para que la pestaña y el panel
+ *  no se contradigan. */
+export const COLOR_ESTADO = {
+  work: '#ff3b4a',
+  personal: '#ff9f2e',
+  free: '#2fd16b',
+  eat: '#2f6bff',
+  meet: '#a24bff',
+} as const satisfies Record<EstadoId, string>;
+
+/* ============================================================
+   SITIO
+   ============================================================ */
+
+/** URL canonica sin barra final: metadata, sitemap y robots salen de aqui. */
+export const SITIO_URL = 'https://status-raw.vercel.app';
+
 /* ============================================================
    LEGAL
    ============================================================ */

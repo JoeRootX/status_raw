@@ -1,7 +1,9 @@
 import { cancionActual } from '@/lib/spotify';
+import { esPanelPublico, noDisponible } from '@/lib/privacidad';
 export const revalidate = 0;
 
 export async function GET() {
+  if (!esPanelPublico()) return noDisponible();
   const fuente = await cancionActual();
   return Response.json(fuente, {
     headers: {

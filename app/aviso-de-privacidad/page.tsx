@@ -16,7 +16,7 @@ export default function AvisoDePrivacidad() {
         <Reloj />
       </header>
 
-      <main className="main--legal">
+      <main id="contenido" className="main--legal">
         <article className="legal">
           <h1>Aviso de privacidad</h1>
 
