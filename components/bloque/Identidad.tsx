@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import { ESTADOS, type EstadoId } from '@/lib/datos';
+import { CANAL_TWITCH, TEXTO_LIVE, estaEnDirecto } from '@/lib/twitch';
 
 /**
  * Sin `estado` (modo privado) la tarjeta se queda en identidad: no dice que
@@ -12,6 +13,11 @@ export default function Identidad({ estado }: { estado?: EstadoId }) {
 
   return (
     <div className="me">
+      {estaEnDirecto() && (
+        <a className="live" href={CANAL_TWITCH} target="_blank" rel="noopener noreferrer">
+          {TEXTO_LIVE}
+        </a>
+      )}
       <Image
         className="avatar"
         src="/avatar.jpg"
