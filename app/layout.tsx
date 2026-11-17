@@ -18,30 +18,37 @@ const mono = JetBrains_Mono({
 });
 
 /**
- * La descripcion cambia con el modo: con el panel cerrado no se anuncia en
- * buscadores ni en tarjetas sociales que aqui se publicaba actividad, Jira o
- * musica. Esos metadatos tambien son superficie de fuga.
+ * Con el panel cerrado tambien cambian el titulo y el noindex: la pestaña y las
+ * tarjetas sociales decian "Panel de estado personal" aunque ya no se publicara
+ * nada, y el titulo es lo primero que ve alguien al compartir el enlace.
  */
-const DESCRIPCION = esPanelPublico()
+const PUBLICO = esPanelPublico();
+
+const TITULO = PUBLICO ? 'joerootX · Panel de estado personal' : 'joerootX · Desarrollador';
+
+const DESCRIPCION = PUBLICO
   ? 'Panel de estado personal de Joe: estado actual, ticket en curso, cola de Jira, último commit, Spotify, YouTube y contacto directo.'
   : 'joerootX — desarrollo de software, auditoría de código y creación de contenido.';
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITIO_URL),
-  title: 'joerootX · Panel de estado personal',
+  title: TITULO,
   description: DESCRIPCION,
   alternates: { canonical: '/' },
+  // robots.txt ya bloquea el rastreo; el meta es la segunda capa, por si alguien
+  // llega por enlace directo o el fichero no se sirve.
+  robots: PUBLICO ? undefined : { index: false, follow: false },
   openGraph: {
     type: 'website',
     locale: 'es_MX',
     url: '/',
     siteName: 'joerootX',
-    title: 'joerootX · Panel de estado personal',
+    title: TITULO,
     description: DESCRIPCION,
   },
   twitter: {
     card: 'summary',
-    title: 'joerootX · Panel de estado personal',
+    title: TITULO,
     description: DESCRIPCION,
   },
 };
