@@ -100,6 +100,13 @@ capturas/                    # 0375.png, 0768.png, 1440.png, legal.png
     no se filtra), las rutas de lectura devuelven 404 (no 403: no confirma que
     existan) y `robots.txt` bloquea todo. Ojo: `/` es estática, así que el flag
     se congela en build; las rutas API lo leen en runtime.
+12. **El letrero LIVE también depende de `PANEL_PUBLICO`**: `estaEnDirecto()`
+    devuelve `false` con el panel cerrado, aunque `LIVE=true`. La primera
+    versión leía `LIVE` a secas y el modo privado seguía anunciando el directo
+    en tiempo real — la fuga de presencia sobrevivía al cierre del panel. El
+    destino del letrero sale de `TWITCH_CANAL` y no tiene valor por defecto:
+    `twitch.tv/joerootx` no existe y, sobre todo, capa 1 y streaming son
+    identidades distintas. Sin canal, el letrero se pinta sin enlace.
 
 ## Fuentes de datos
 | Bloque | Estado | Fuente / degradación |

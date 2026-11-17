@@ -13,6 +13,7 @@ Con el panel cerrado:
 - `/` muestra la tarjeta de identidad, sin estado ni actividad.
 - `/api/estado`, `/api/jira/*`, `/api/spotify`, `/api/youtube` y `/api/contacto`
   responden 404.
+- El letrero `LIVE` no se pinta aunque `LIVE=true`: depende del panel público.
 - `robots.txt` bloquea todo el sitio.
 - La metadata y el `theme-color` no anuncian actividad.
 
