@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import Footer from '@/components/bloque/Footer';
-import Reloj from '@/components/bloque/Reloj';
+import Encabezado from '@/components/bloque/Encabezado';
 import { formatearFecha, listarPosts, obtenerPost } from '@/lib/blog';
 import { renderizarMdx } from '@/lib/mdx';
 
@@ -33,10 +33,7 @@ export default async function Entrada({ params }: Props) {
 
   return (
     <>
-      <header className="top">
-        <div className="brand">&gt; joerootX_</div>
-        <Reloj />
-      </header>
+      <Encabezado />
 
       <main className="main--legal">
         <article className="legal">

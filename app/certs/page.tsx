@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { CATEGORIAS, CERTIFICACIONES, agruparCertificaciones } from '@/lib/certs';
 import BadgeCert from '@/components/bloque/BadgeCert';
 import Footer from '@/components/bloque/Footer';
-import Reloj from '@/components/bloque/Reloj';
+import Encabezado from '@/components/bloque/Encabezado';
 
 export const metadata: Metadata = {
   title: 'Certificaciones · joerootX',
@@ -16,10 +16,7 @@ export default function Certificaciones() {
 
   return (
     <>
-      <header className="top">
-        <div className="brand">&gt; joerootX_</div>
-        <Reloj />
-      </header>
+      <Encabezado />
 
       {/* Igual que /cv y las legales: se anula el grid de tres columnas del panel
           para que las categorias no caigan en una columna estrecha. */}
