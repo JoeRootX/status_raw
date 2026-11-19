@@ -7,10 +7,10 @@ import { esPanelPublico } from '@/lib/privacidad';
 import ChipsEstado from '@/components/bloque/ChipsEstado';
 import ContactForm from '@/components/bloque/ContactForm';
 import Footer from '@/components/bloque/Footer';
+import Encabezado from '@/components/bloque/Encabezado';
 import Identidad from '@/components/bloque/Identidad';
 import InfoCards from '@/components/bloque/InfoCards';
 import Multimedia from '@/components/bloque/Multimedia';
-import Reloj from '@/components/bloque/Reloj';
 import Refresco from '@/components/bloque/Refresco';
 
 /**
@@ -26,10 +26,7 @@ export default async function Inicio() {
   if (!esPanelPublico()) {
     return (
       <>
-        <header className="top">
-          <div className="brand">&gt; joerootX_</div>
-          <Reloj />
-        </header>
+        <Encabezado />
         <main id="contenido">
           <section className="center">
             <Identidad />
@@ -54,10 +51,7 @@ export default async function Inicio() {
 
   return (
     <>
-      <header className="top">
-        <div className="brand">&gt; joerootX_</div>
-        <Reloj />
-      </header>
+      <Encabezado />
 
       {/* data-state va aqui y no en <body>: en React no se puede poner un atributo
           en el body desde un componente, y al declararse --st en este elemento

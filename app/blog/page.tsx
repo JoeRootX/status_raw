@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import Footer from '@/components/bloque/Footer';
-import Reloj from '@/components/bloque/Reloj';
+import Encabezado from '@/components/bloque/Encabezado';
 import { formatearFecha, listarPosts } from '@/lib/blog';
 
 export const metadata: Metadata = {
@@ -15,10 +15,7 @@ export default function Blog() {
 
   return (
     <>
-      <header className="top">
-        <div className="brand">&gt; joerootX_</div>
-        <Reloj />
-      </header>
+      <Encabezado />
 
       <main className="main--legal">
         <section className="legal">

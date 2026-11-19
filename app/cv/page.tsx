@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { CV } from '@/lib/cv';
 import Footer from '@/components/bloque/Footer';
-import Reloj from '@/components/bloque/Reloj';
+import Encabezado from '@/components/bloque/Encabezado';
 
 export const metadata: Metadata = {
   title: 'CV · joerootX',
@@ -13,10 +13,7 @@ export const metadata: Metadata = {
 export default function Cv() {
   return (
     <>
-      <header className="top">
-        <div className="brand">&gt; joerootX_</div>
-        <Reloj />
-      </header>
+      <Encabezado />
 
       <main className="main--cv">
         <article className="cv">

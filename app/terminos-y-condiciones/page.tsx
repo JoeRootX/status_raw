@@ -1,7 +1,7 @@
+import Encabezado from '@/components/bloque/Encabezado';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { CORREO, FECHA_ACTUALIZACION } from '@/lib/datos';
-import Reloj from '@/components/bloque/Reloj';
 
 export const metadata: Metadata = {
   title: 'Términos y condiciones · joerootX',
@@ -11,10 +11,7 @@ export const metadata: Metadata = {
 export default function TerminosYCondiciones() {
   return (
     <>
-      <header className="top">
-        <div className="brand">&gt; joerootX_</div>
-        <Reloj />
-      </header>
+      <Encabezado />
 
       <main id="contenido" className="main--legal">
         <article className="legal">
