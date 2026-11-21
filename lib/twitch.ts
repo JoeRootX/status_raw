@@ -7,7 +7,8 @@ import { esPanelPublico } from './privacidad';
  * streaming son identidades distintas y un enlace duro entre ellas es un puente
  * que la arquitectura prohibe (ver Identidad-Publica en el vault). Sin
  * `TWITCH_CANAL` el letrero se pinta sin enlace: un enlace muerto es peor que
- * ninguno, y `twitch.tv/joerootx` no existe.
+ * ninguno. Decisión 2026-11-20 (B7): el canal es el profesional,
+ * https://www.twitch.tv/joerootx, y se activa poniendo TWITCH_CANAL en Vercel.
  *
  * Solo se acepta https absoluto; cualquier otra cosa se descarta en vez de
  * acabar como href arbitrario.

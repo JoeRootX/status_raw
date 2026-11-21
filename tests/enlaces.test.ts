@@ -5,7 +5,7 @@ import { esExterno, LEGALES, REDES } from '../lib/enlaces';
 test('las redes del pie no tienen enlaces muertos', () => {
   assert.deepEqual(
     REDES.map((enlace) => enlace.texto),
-    ['GitHub', 'Instagram', 'LinkedIn', 'X'],
+    ['GitHub', 'Instagram', 'LinkedIn', 'TikTok', 'Twitch', 'X', 'YouTube'],
   );
   for (const enlace of REDES) {
     const { href } = enlace;
@@ -13,6 +13,13 @@ test('las redes del pie no tienen enlaces muertos', () => {
     assert.notEqual(href, '', `${enlace.texto} con href vacio`);
     assert.ok(!href.includes('#'), `${enlace.texto} apunta a un ancla vacia`);
     assert.ok(esExterno(href), `${enlace.texto} no es una URL absoluta`);
+  }
+});
+
+test('las redes de la marca usan el identificador joerootx', () => {
+  for (const enlace of REDES) {
+    if (enlace.texto === 'LinkedIn') continue;
+    assert.match(enlace.href ?? '', /joerootx\/?$/i, `${enlace.texto} no usa joerootx`);
   }
 });
 
